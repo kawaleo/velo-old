@@ -24,6 +24,11 @@ impl Parser {
         //i.e: x: (this)
         //above panics ^^^
         let value = self.parse_literal(self.tokens[self.cursor].clone());
+        let message = format!(
+            "{} \x1b[1mExpected semicolon following variable '{}'\x1b[0m",
+            ERROR_INDICATOR, name
+        );
+
         let variable = Statement::VariableAssignment {
             name,
             var_type: final_type,
