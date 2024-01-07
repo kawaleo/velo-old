@@ -1,8 +1,47 @@
 use super::super::Parser;
+use crate::syntax::ast::{Ast, Expression, Statement};
 use crate::syntax::error::ERROR_INDICATOR;
 use crate::syntax::lexer::{Token, TokenType, Type};
 
 impl Parser {
+    pub fn variable_assignment(&mut self, ret: bool, cursor: Option<usize>) -> Option<Ast> {
+        let mut name = self.parse_var_name().unwrap_or(String::new());
+        let mut var_type: Option<Type> = self.parse_var_type();
+
+        if cursor.is_some() {
+            self.cursor = cursor.unwrap();
+        } else {
+            self.cursor = self.cursor;
+        }
+
+        self.cursor += 2; // Move cursor past '=' and literal_index
+        let final_type = match var_type.is_some() {
+            true => var_type.unwrap(),
+            _ => Type::Void,
+        };
+
+        //FIX ME: parse_literal panics when type for tuple is invalid
+        //i.e: x: (this)
+        //above panics ^^^
+        let value = self.parse_literal(self.tokens[self.cursor].clone());
+        let variable = Statement::VariableAssignment {
+            name,
+            var_type: final_type,
+            value,
+        };
+
+        let mut res = None;
+
+        match ret {
+            false => self.nodes.push(Ast::Statement(variable)),
+            true => res = Some(Ast::Statement(variable)),
+        }
+
+        self.tokens.drain(0..=self.cursor); // Adjusted token removal range
+
+        res
+    }
+
     pub fn parse_var_name(&mut self) -> Option<String> {
         match self.tokens.get(1) {
             Some(token) if token.token_type == TokenType::Identifier => {

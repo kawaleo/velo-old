@@ -1,15 +1,162 @@
 use super::super::Parser;
-use crate::syntax::ast::{Ast, Expression, Literal, Statement};
+use crate::syntax::ast::{Ast, Expression, FunctionBody, Literal, Statement};
 use crate::syntax::error::ERROR_INDICATOR;
 use crate::syntax::lexer::{Token, TokenType, Type};
 
 impl Parser {
     pub fn function_declaration(&mut self) {
-        let mut name = String::new();
-        let mut params = Vec::new();
-        let mut body = Vec::new();
-        let mut ret_type = Type::Void;
+        let mut name = self.parse_function_name();
+        let mut params = self.parse_function_params(&name);
+        let mut ret_type = self.parse_function_ret_type(&name);
 
+        let mut stmts = Vec::new();
+        let mut exprs = Vec::new();
+        let mut block = None;
+        // Return type
+
+        // MOST CLEAN CODE OF 2024 (official)
+        if let Some(token) = self.tokens.get(self.cursor - 1) {
+            println!("{}", token.lexeme.clone());
+            if token.token_type == TokenType::LBrace || token.token_type == TokenType::Identifier {
+                let mut brace_count = 1;
+                let mut body_cursor = self.cursor + 1;
+
+                match token.token_type {
+                    TokenType::LBrace => body_cursor = self.cursor,
+                    _ => body_cursor = self.cursor + 1,
+                }
+
+                while let Some(body_token) = self.tokens.get(body_cursor) {
+                    println!("body token {}", body_token.lexeme);
+                    match body_token.token_type {
+                        TokenType::LBrace => brace_count += 1,
+                        TokenType::RBrace => {
+                            brace_count -= 1;
+                            if brace_count == 0 {
+                                self.cursor = body_cursor + 1;
+                                break;
+                            }
+                        }
+
+                        TokenType::Let => {
+                            let mut var_name = String::new();
+                            let mut var_type = Type::Void;
+                            let mut value = Expression::Literal(Literal::Null);
+
+                            match self.tokens[body_cursor + 1].token_type {
+                                TokenType::Identifier => {
+                                    var_name = self.tokens[body_cursor + 1].lexeme.clone();
+                                    body_cursor += 1;
+
+                                    if let Some(next_token) = self.tokens.get(body_cursor + 1) {
+                                        match next_token.token_type {
+                                            TokenType::Colon => {
+                                                body_cursor += 1;
+
+                                                if let Some(type_token) =
+                                                    self.tokens.get(body_cursor + 1)
+                                                {
+                                                    let type_str = &type_token.lexeme.clone();
+                                                    var_type = match type_str.as_str() {
+                                                        "bool" => Type::Bool,
+                                                        "int" => Type::Int,
+                                                        "short" => Type::Short,
+                                                        "large" => Type::Large,
+                                                        "float" => Type::Float,
+                                                        "string" => Type::String,
+
+                                                        _ => {
+                                                            unimplemented!();
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            TokenType::Eq => {
+                                                body_cursor += 1;
+
+                                                if let Some(val_token) =
+                                                    self.tokens.get(body_cursor + 1)
+                                                {
+                                                    match val_token.token_type {
+                                                        TokenType::String => {
+                                                            value = Expression::Literal(
+                                                                Literal::StringLiteral(
+                                                                    val_token.lexeme.clone(),
+                                                                ),
+                                                            );
+                                                        }
+                                                        _ => {
+                                                            unimplemented!();
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            _ => unimplemented!(),
+                                        }
+                                    } else {
+                                        let message = format!(
+                                            "{} Unexpected end of input when parsing function '{}'",
+                                            ERROR_INDICATOR, name
+                                        );
+                                    }
+                                }
+
+                                _ => {
+                                    unimplemented!();
+                                }
+                            }
+
+                            let variable = Statement::VariableAssignment {
+                                name: var_name,
+                                var_type,
+                                value,
+                            };
+                            stmts.push(variable)
+                        }
+
+                        _ => {}
+                    }
+
+                    body_cursor += 1;
+                }
+            } else {
+                let message = format!(
+                    "{} \x1b[1mExpected '{{' to start function body, found '{}'\x1b[0m",
+                    ERROR_INDICATOR,
+                    token.lexeme.clone()
+                );
+                self.throw_error(token.line_num, message);
+
+                self.tokens.clear();
+                return;
+            }
+        } else {
+            let message = format!(
+                "{} \x1b[1mUnexpected end of tokens while parsing function body\x1b[0m",
+                ERROR_INDICATOR,
+            );
+            self.throw_error(0, message);
+
+            return;
+        }
+
+        let body = FunctionBody::new(stmts, exprs, block);
+
+        self.tokens.drain(0..self.cursor);
+        // Avengers! Assemble (please help)
+        let function_assignment = Statement::Function {
+            name,
+            params,
+            ret_type,
+            body,
+        };
+        self.nodes.push(Ast::Statement(function_assignment));
+    }
+
+    fn parse_function_name(&mut self) -> String {
+        let mut name = String::new();
         match self.tokens.get(1) {
             Some(next_token) if next_token.token_type == TokenType::Identifier => {
                 name = next_token.lexeme.clone();
@@ -29,10 +176,14 @@ impl Parser {
                     ERROR_INDICATOR,
                 );
                 self.throw_error(self.tokens[0].line_num, message);
-
-                return;
             }
         }
+        name
+    }
+
+    fn parse_function_params(&mut self, name: &String) -> Vec<(String, Type)> {
+        let mut params = Vec::new();
+
         if let Some(token) = self.tokens.get(self.cursor + 1) {
             if token.token_type == TokenType::LParen {
                 let mut param_cursor = self.cursor + 2;
@@ -116,7 +267,6 @@ impl Parser {
                 );
                 self.throw_error(token.line_num, message);
                 self.tokens.clear();
-                return;
             }
         } else {
             // Handle unexpected end of tokens while parsing function parameters
@@ -125,10 +275,13 @@ impl Parser {
                 ERROR_INDICATOR, name
             );
             self.throw_error(0, message);
-            return;
         }
+        params
+    }
 
-        // Return type
+    fn parse_function_ret_type(&mut self, name: &String) -> Type {
+        let mut ret_type = Type::Void;
+
         if let Some(token) = self.tokens.get(self.cursor) {
             if token.token_type == TokenType::Gt {
                 if let Some(next_token) = self.tokens.get(self.cursor + 1) {
@@ -141,16 +294,16 @@ impl Parser {
                     );
                     self.throw_error(token.line_num, message);
                     self.tokens.clear();
-                    return;
                 }
             } else {
                 match token.token_type {
-                    TokenType::LBrace => {}
+                    TokenType::LBrace => {
+                        self.cursor += 1;
+                    }
                     _ => {
                         let message = format!("{} \x1b[1mExpected either '>' or '{}' when parsing function '{}', but found {}", ERROR_INDICATOR, "{",  name, token.lexeme.clone());
                         self.throw_error(token.line_num, message);
                         self.tokens.clear();
-                        return;
                     }
                 }
             }
@@ -160,58 +313,7 @@ impl Parser {
                 ERROR_INDICATOR, name
             );
             self.throw_error(0, message);
-            return;
         }
-
-        // Function body
-        if let Some(token) = self.tokens.get(self.cursor) {
-            if token.token_type == TokenType::LBrace {
-                let mut brace_count = 1;
-                let mut body_cursor = self.cursor + 1;
-
-                while let Some(body_token) = self.tokens.get(body_cursor) {
-                    match body_token.token_type {
-                        TokenType::LBrace => brace_count += 1,
-                        TokenType::RBrace => {
-                            brace_count -= 1;
-                            if brace_count == 0 {
-                                self.cursor = body_cursor + 1;
-                                break;
-                            }
-                        }
-                        _ => {}
-                    }
-                    body.push(Ast::Expression(Expression::Literal(Literal::Null)));
-                    body_cursor += 1;
-                }
-            } else {
-                let message = format!(
-                    "{} \x1b[1mExpected '{{' to start function body, found '{:#?}'\x1b[0m",
-                    ERROR_INDICATOR, token.token_type
-                );
-                self.throw_error(token.line_num, message);
-
-                self.tokens.clear();
-                return;
-            }
-        } else {
-            let message = format!(
-                "{} \x1b[1mUnexpected end of tokens while parsing function body\x1b[0m",
-                ERROR_INDICATOR,
-            );
-            self.throw_error(0, message);
-
-            return;
-        }
-
-        self.tokens.drain(0..self.cursor);
-        // Avengers! Assemble (please help)
-        let function_assignment = Statement::Function {
-            name,
-            params,
-            ret_type,
-            body,
-        };
-        self.nodes.push(Ast::Statement(function_assignment));
+        ret_type
     }
 }

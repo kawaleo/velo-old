@@ -18,15 +18,37 @@ pub enum Statement {
     Function {
         name: String,
         params: Vec<(String, Type)>,
-        body: Vec<Ast>,
+        body: FunctionBody,
         ret_type: Type,
     },
+    ExprStmt(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionBody {
+    stmts: Vec<Statement>,
+    exprs: Vec<Expression>,
+    block: Option<Box<FunctionBody>>,
+}
+
+impl FunctionBody {
+    pub fn new(
+        stmts: Vec<Statement>,
+        exprs: Vec<Expression>,
+        block: Option<Box<FunctionBody>>,
+    ) -> FunctionBody {
+        FunctionBody {
+            stmts,
+            exprs,
+            block,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Literal),
-    BinarpOp(Box<Expression>, Box<Expression>, String),
+    BinaryOp(Box<Expression>, Box<Expression>, String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -30,7 +30,9 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Ast>, VeloError> {
         while !self.tokens.is_empty() {
             match self.tokens[0].token_type {
-                TokenType::Let => self.variable_assignment(),
+                TokenType::Let => {
+                    self.variable_assignment(false, None);
+                }
                 TokenType::Func => self.function_declaration(),
                 TokenType::EOF => {
                     self.nodes
@@ -68,30 +70,6 @@ impl Parser {
         }
 
         Ok(ast_nodes)
-    }
-
-    fn variable_assignment(&mut self) {
-        let mut name = self.parse_var_name().unwrap_or(String::new());
-        let mut var_type: Option<Type> = self.parse_var_type();
-
-        self.cursor += 2; // Move cursor past '=' and literal_index
-        let final_type = match var_type.is_some() {
-            true => var_type.unwrap(),
-            _ => Type::Void,
-        };
-
-        //FIX ME: parse_literal panics when type for tuple is invalid
-        //i.e: x: (this)
-        //above panics ^^^
-        let value = self.parse_literal(self.tokens[self.cursor].clone());
-        let variable = Statement::VariableAssignment {
-            name,
-            var_type: final_type,
-            value,
-        };
-        self.nodes.push(Ast::Statement(variable));
-
-        self.tokens.drain(0..=self.cursor); // Adjusted token removal range
     }
 
     fn parse_literal(&mut self, token: Token) -> Expression {
@@ -246,6 +224,14 @@ impl Parser {
 
     fn parse_expression(_tokens: &Vec<String>) -> Literal {
         Literal::Null
+    }
+
+    pub fn expect(&mut self, tok_type: TokenType, cursor: usize, error_message: String) {
+        if self.tokens[cursor].token_type == tok_type {
+            return;
+        } else {
+            self.throw_error(self.tokens[cursor].line_num, error_message);
+        }
     }
 
     pub fn throw_error(&mut self, line: usize, message: String) {
