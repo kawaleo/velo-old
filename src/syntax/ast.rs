@@ -11,6 +11,7 @@ pub enum Ast {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     VariableAssignment {
+        constant: bool,
         name: String,
         var_type: Type,
         value: Expression,
@@ -57,6 +58,7 @@ pub enum Literal {
     Int(i32),
     Large(i64),
     Float(f32),
+    Bool(bool),
     StringLiteral(String),
     Null,
 }
@@ -72,11 +74,13 @@ impl From<Literal> for Ast {
     fn from(literal: Literal) -> Self {
         match literal {
             Literal::Float(val) => Ast::Statement(Statement::VariableAssignment {
+                constant: false,
                 name: "".to_string(),
                 var_type: Type::Void,
                 value: Expression::Literal(Literal::Null),
             }),
             Literal::StringLiteral(val) => Ast::Statement(Statement::VariableAssignment {
+                constant: false,
                 name: "".to_string(),
                 var_type: Type::Void,
                 value: Expression::Literal(Literal::StringLiteral(val)),

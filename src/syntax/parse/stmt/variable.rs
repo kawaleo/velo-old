@@ -4,9 +4,16 @@ use crate::syntax::error::ERROR_INDICATOR;
 use crate::syntax::lexer::{Token, TokenType, Type};
 
 impl Parser {
-    pub fn variable_assignment(&mut self, ret: bool, cursor: Option<usize>) -> Option<Ast> {
+    pub fn variable_assignment(
+        &mut self,
+        ret: bool,
+        cursor: Option<usize>,
+        mk_const: bool,
+    ) -> Option<Ast> {
         let mut name = self.parse_var_name().unwrap_or(String::new());
         let mut var_type: Option<Type> = self.parse_var_type();
+
+        let mut infer_type = true;
 
         if cursor.is_some() {
             self.cursor = cursor.unwrap();
@@ -15,24 +22,33 @@ impl Parser {
         }
 
         self.cursor += 2; // Move cursor past '=' and literal_index
-        let final_type = match var_type.is_some() {
-            true => var_type.unwrap(),
+        let mut final_type = match var_type.is_some() {
+            true => {
+                infer_type = false;
+                var_type.unwrap()
+            }
             _ => Type::Void,
         };
 
         //FIX ME: parse_literal panics when type for tuple is invalid
         //i.e: x: (this)
         //above panics ^^^
-        let value = self.parse_literal(self.tokens[self.cursor].clone(), &final_type);
+        let value = self.parse_literal(self.tokens[self.cursor].clone(), &final_type, infer_type);
+
+        match value.1.is_some() {
+            true => final_type = value.1.unwrap(),
+            _ => {}
+        }
         let message = format!(
             "{} \x1b[1mExpected semicolon following variable '{}'\x1b[0m",
             ERROR_INDICATOR, name
         );
 
         let variable = Statement::VariableAssignment {
+            constant: mk_const,
             name,
             var_type: final_type,
-            value,
+            value: value.0,
         };
 
         let mut res = None;

@@ -109,6 +109,7 @@ impl Parser {
                             }
 
                             let variable = Statement::VariableAssignment {
+                                constant: false,
                                 name: var_name,
                                 var_type,
                                 value,

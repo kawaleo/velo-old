@@ -10,6 +10,7 @@ pub enum TokenType {
 
     // Keywords
     Func,
+    Const,
     Let,
     If,
     Else,
@@ -21,8 +22,8 @@ pub enum TokenType {
     Continue,
     Return,
 
-    KwTrue,
-    KwFalse,
+    True,
+    False,
 
     Import,
     Export,
@@ -82,13 +83,14 @@ impl TokenType {
 }
 
 pub struct KeywordMap {
-    data: [(&'static str, TokenType); 18],
+    data: [(&'static str, TokenType); 19],
 }
 
 impl KeywordMap {
     const fn new() -> Self {
         Self {
             data: [
+                ("const", TokenType::Const),
                 ("let", TokenType::Let),
                 ("func", TokenType::Func),
                 ("if", TokenType::If),
@@ -99,8 +101,8 @@ impl KeywordMap {
                 ("break", TokenType::Break),
                 ("continue", TokenType::Continue),
                 ("return", TokenType::Return),
-                ("true", TokenType::KwTrue),
-                ("false", TokenType::KwFalse),
+                ("true", TokenType::True),
+                ("false", TokenType::False),
                 ("import", TokenType::Import),
                 ("export", TokenType::Export),
                 ("struct", TokenType::Struct),
@@ -166,6 +168,9 @@ impl Type {
         }
 
         type_result.unwrap()
+    }
+    pub fn to_string(ty: &Type) -> String {
+        format!("{:#?}", ty).to_lowercase()
     }
 }
 

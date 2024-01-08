@@ -30,7 +30,10 @@ impl Parser {
         while !self.tokens.is_empty() {
             match self.tokens[0].token_type {
                 TokenType::Let => {
-                    self.variable_assignment(false, None);
+                    self.variable_assignment(false, None, false);
+                }
+                TokenType::Const => {
+                    self.variable_assignment(false, None, true);
                 }
                 TokenType::Func => self.function_declaration(),
                 TokenType::Semicolon => {
@@ -74,9 +77,43 @@ impl Parser {
         Ok(ast_nodes)
     }
 
-    fn parse_literal(&mut self, token: Token, expected: &Type) -> Expression {
+    fn parse_literal(
+        &mut self,
+        token: Token,
+        expected: &Type,
+        infer_type: bool,
+    ) -> (Expression, Option<Type>) {
         match token.token_type {
-            TokenType::String => Expression::Literal(Literal::StringLiteral(token.lexeme.clone())),
+            TokenType::True => {
+                if expected != &Type::Bool && !infer_type {
+                    let message = format!(
+                        "{} \x1b[1mExpected type '{}' but found 'bool'",
+                        ERROR_INDICATOR,
+                        Type::to_string(&expected)
+                    );
+                    self.throw_error(token.line_num, message);
+                    (Expression::Literal(Literal::Bool(true)), None)
+                } else {
+                    (Expression::Literal(Literal::Bool(true)), Some(Type::Bool))
+                }
+            }
+            TokenType::False => {
+                if expected != &Type::Bool && !infer_type {
+                    let message = format!(
+                        "{} \x1b[1mExpected type '{}' but found 'bool'",
+                        ERROR_INDICATOR,
+                        Type::to_string(&expected)
+                    );
+                    self.throw_error(token.line_num, message);
+                    (Expression::Literal(Literal::Bool(false)), None)
+                } else {
+                    (Expression::Literal(Literal::Bool(false)), Some(Type::Bool))
+                }
+            }
+            TokenType::String => (
+                Expression::Literal(Literal::StringLiteral(token.lexeme.clone())),
+                Some(Type::String),
+            ),
             TokenType::NumericLiteral => {
                 let has_operator = self.tokens.get(self.cursor + 1).map_or(false, |t| {
                     matches!(
@@ -147,40 +184,69 @@ impl Parser {
 
                     match keyword_error {
                         false => {
-                            let res = Self::evaluate_expression(&to_eval, &expected, &token);
+                            let res =
+                                Self::evaluate_expression(&to_eval, &expected, &token, infer_type);
                             if res.1.is_none() {
-                                res.0
+                                (res.0, Some(Type::Float))
                             } else {
                                 self.throw_error(self.tokens[0].line_num, res.1.unwrap());
-                                return Expression::Literal(Literal::Float(0.0));
+                                return (
+                                    Expression::Literal(Literal::Float(0.0)),
+                                    Some(Type::Float),
+                                );
                             }
                         }
                         _ => {
                             self.throw_error(self.tokens[1].line_num, keyword_error_msg);
-                            return Expression::Literal(Literal::Float(0.0));
+                            return (Expression::Literal(Literal::Float(0.0)), Some(Type::Float));
                         }
                     }
                 } else {
-                    match expected {
-                        Type::Short if v as i16 as f32 == v => {
-                            Expression::Literal(Literal::Short(v as i16))
-                        }
-                        Type::Int if v as i32 as f32 == v => {
-                            Expression::Literal(Literal::Int(v as i32))
-                        }
-                        Type::Large if v as i64 as f32 == v => {
-                            Expression::Literal(Literal::Large(v as i64))
-                        }
-                        Type::Float => Expression::Literal(Literal::Float(v)),
-                        _ => {
-                            let message = format!(
-                                "{} Expected '{:#?}' found 'int'",
-                                ERROR_INDICATOR, token.token_type
-                            );
+                    if !infer_type {
+                        match expected {
+                            Type::Short if v as i16 as f32 == v => {
+                                (Expression::Literal(Literal::Short(v as i16)), None)
+                            }
+                            Type::Int if v as i32 as f32 == v => {
+                                (Expression::Literal(Literal::Int(v as i32)), None)
+                            }
+                            Type::Large if v as i64 as f32 == v => {
+                                (Expression::Literal(Literal::Large(v as i64)), None)
+                            }
+                            Type::Float => (Expression::Literal(Literal::Float(v)), None),
+                            _ => {
+                                let message = format!(
+                                    "{} Expected '{:#?}' found 'int'",
+                                    ERROR_INDICATOR, token.token_type
+                                );
 
-                            self.throw_error(self.tokens[0].line_num, message);
+                                self.throw_error(self.tokens[0].line_num, message);
 
-                            Expression::Literal(Literal::Float(v))
+                                (Expression::Literal(Literal::Float(v)), Some(Type::Float))
+                            }
+                        }
+                    } else {
+                        match v {
+                            // Check if it's a float and return Float if so
+                            val if val.is_sign_positive() && val.fract() != 0.0 => {
+                                (Expression::Literal(Literal::Float(val)), Some(Type::Float))
+                            }
+                            // Check if it's a whole number and fits into i16
+                            val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
+                                Expression::Literal(Literal::Short(val as i16)),
+                                Some(Type::Short),
+                            ),
+                            // Check if it's a whole number and fits into i32
+                            val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
+                                Expression::Literal(Literal::Int(val as i32)),
+                                Some(Type::Int),
+                            ),
+                            // For values larger than i32 or with decimal parts, use i64 (Large)
+                            val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
+                                Expression::Literal(Literal::Large(val as i64)),
+                                Some(Type::Large),
+                            ),
+                            _ => (Expression::Literal(Literal::Float(v)), Some(Type::Float)), // todo: throw error
                         }
                     }
                 }
@@ -194,7 +260,7 @@ impl Parser {
                 self.throw_error(self.tokens[0].line_num, message);
                 self.cursor = 0;
 
-                Expression::Literal(Literal::Null)
+                (Expression::Literal(Literal::Null), Some(Type::Void))
             }
         }
     }
@@ -203,7 +269,8 @@ impl Parser {
         expr: &[String],
         expected: &Type,
         token: &Token,
-    ) -> (Expression, Option<String>) {
+        infer_type: bool,
+    ) -> (Expression, Option<String>, Option<Type>) {
         let mut nums: Vec<f32> = Vec::new();
         let mut ops: Vec<&str> = Vec::new();
 
@@ -256,31 +323,78 @@ impl Parser {
             ERROR_INDICATOR, token.token_type
         );
 
-        let message = match expected {
-            Type::Short if (result as i16 as f32) != result => Some(format!(
-                "{} \x1b[1mLoss of precision: 'float' value is out of range for 'short'",
-                ERROR_INDICATOR
-            )),
-            Type::Int if (result as i32 as f32) != result => Some(format!(
-                "{} \x1b[1mLoss of precision: 'float' value is out of range for 'int'",
-                ERROR_INDICATOR
-            )),
-            Type::Large if (result as i64 as f32) != result => Some(format!(
-                "{} \x1b[1mLoss of precision: 'float' value is out of range for 'large'",
-                ERROR_INDICATOR
-            )),
-            _ => None,
-        };
+        if !infer_type {
+            let message = match expected {
+                Type::Short if (result as i16 as f32) != result => Some(format!(
+                    "{} \x1b[1mLoss of precision: 'float' value is out of range for 'short'",
+                    ERROR_INDICATOR
+                )),
+                Type::Int if (result as i32 as f32) != result => Some(format!(
+                    "{} \x1b[1mLoss of precision: 'float' value is out of range for 'int'",
+                    ERROR_INDICATOR
+                )),
+                Type::Large if (result as i64 as f32) != result => Some(format!(
+                    "{} \x1b[1mLoss of precision: 'float' value is out of range for 'large'",
+                    ERROR_INDICATOR
+                )),
+                _ => None,
+            };
 
-        match expected {
-            Type::Short => (Expression::Literal(Literal::Short(result as i16)), message),
-            Type::Int => (Expression::Literal(Literal::Int(result as i32)), message),
-            Type::Large => (Expression::Literal(Literal::Large(result as i64)), message),
-            Type::Float => (Expression::Literal(Literal::Float(result)), None),
-            _ => (
-                Expression::Literal(Literal::Float(result)),
-                Some(message_wrong_type),
-            ),
+            match expected {
+                Type::Short => (
+                    Expression::Literal(Literal::Short(result as i16)),
+                    message,
+                    None,
+                ),
+                Type::Int => (
+                    Expression::Literal(Literal::Int(result as i32)),
+                    message,
+                    None,
+                ),
+                Type::Large => (
+                    Expression::Literal(Literal::Large(result as i64)),
+                    message,
+                    None,
+                ),
+                Type::Float => (Expression::Literal(Literal::Float(result)), None, None),
+                _ => (
+                    Expression::Literal(Literal::Float(result)),
+                    Some(message_wrong_type),
+                    None,
+                ),
+            }
+        } else {
+            match result {
+                // Check if it's a float and return Float if so
+                val if val.is_sign_positive() && val.fract() != 0.0 => (
+                    Expression::Literal(Literal::Float(val)),
+                    None,
+                    Some(Type::Float),
+                ),
+                // Check if it's a whole number and fits into i16
+                val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
+                    Expression::Literal(Literal::Short(val as i16)),
+                    None,
+                    Some(Type::Short),
+                ),
+                // Check if it's a whole number and fits into i32
+                val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
+                    Expression::Literal(Literal::Int(val as i32)),
+                    None,
+                    Some(Type::Int),
+                ),
+                // For values larger than i32 or with decimal parts, use i64 (Large)
+                val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
+                    Expression::Literal(Literal::Large(result as i64)),
+                    None,
+                    Some(Type::Large),
+                ),
+                _ => (
+                    Expression::Literal(Literal::Float(result)),
+                    Some(message_wrong_type),
+                    None,
+                ),
+            }
         }
     }
 
