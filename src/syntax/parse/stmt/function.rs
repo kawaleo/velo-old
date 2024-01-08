@@ -14,6 +14,7 @@ impl Parser {
         let mut block = None;
         // Return type
 
+        // make variable_assignment not drain tokens when parsing for function body
         // MOST CLEAN CODE OF 2024 (official)
         if let Some(token) = self.tokens.get(self.cursor - 1) {
             println!("{}", token.lexeme.clone());
