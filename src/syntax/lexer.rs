@@ -338,7 +338,9 @@ impl Lexer {
                         }
                     } else if self.source[0].is_digit(10) {
                         let mut num = String::new();
-                        while !self.source.is_empty() && self.source[0].is_digit(10) {
+                        while !self.source.is_empty()
+                            && (self.source[0].is_digit(10) || self.source[0] == '.')
+                        {
                             num.push(self.source.remove(0));
                         }
 

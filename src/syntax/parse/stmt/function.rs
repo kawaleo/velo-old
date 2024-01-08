@@ -145,6 +145,7 @@ impl Parser {
         let body = FunctionBody::new(stmts, exprs, block);
 
         self.tokens.drain(0..self.cursor);
+        self.cursor = 0;
         // Avengers! Assemble (please help)
         let function_assignment = Statement::Function {
             name,

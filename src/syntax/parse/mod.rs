@@ -1,11 +1,10 @@
-#![allow(unused)]
+#[allow(unused)]
 mod stmt;
 
 use super::ast::Expression;
 use super::ast::*;
 use super::error::{ErrorType::ParseError, VeloError, ERROR_INDICATOR};
 use super::lexer::{KeywordMap, Token, TokenType, Type, KEYWORDS};
-use stmt::variable;
 
 use std::process;
 
@@ -34,6 +33,9 @@ impl Parser {
                     self.variable_assignment(false, None);
                 }
                 TokenType::Func => self.function_declaration(),
+                TokenType::Semicolon => {
+                    self.tokens.remove(0);
+                }
                 TokenType::EOF => {
                     self.nodes
                         .push(Ast::Expression(Expression::Literal(Literal::Null)));
@@ -62,7 +64,7 @@ impl Parser {
                 println!("TODO: Potential Fixes");
 
                 match error.error_type {
-                    ParseError => println!("This error is found to be of type `ParseError`"),
+                    ParseError => println!("This error is found to be of type 'ParseError'"),
                     _ => unreachable!(),
                 }
             }
@@ -72,7 +74,7 @@ impl Parser {
         Ok(ast_nodes)
     }
 
-    fn parse_literal(&mut self, token: Token) -> Expression {
+    fn parse_literal(&mut self, token: Token, expected: &Type) -> Expression {
         match token.token_type {
             TokenType::String => Expression::Literal(Literal::StringLiteral(token.lexeme.clone())),
             TokenType::NumericLiteral => {
@@ -83,14 +85,16 @@ impl Parser {
                     )
                 });
 
-                let mut value = token.lexeme.parse::<i32>().map_err(|_| {
-                    let message = format!(
-                        "{} \x1b[1mFailed to parse '{}' as a numeric literal\x1b[0m",
-                        ERROR_INDICATOR, token.lexeme,
-                    );
+                let message = format!(
+                    "{} \x1b[1mFailed to parse '{}' as a numeric literal\x1b[0m",
+                    ERROR_INDICATOR, token.lexeme,
+                );
 
-                    self.throw_error(self.tokens[0].line_num, message);
-                });
+                let v = token
+                    .lexeme
+                    .parse::<f32>()
+                    .map_err(|_| self.throw_error(self.tokens[0].line_num, message))
+                    .unwrap();
 
                 if has_operator {
                     let mut to_eval: Vec<String> = Vec::new();
@@ -142,20 +146,44 @@ impl Parser {
                     self.cursor = current_index - 1;
 
                     match keyword_error {
-                        false => value = Ok(Self::evaluate_expression(&to_eval)),
+                        false => {
+                            let res = Self::evaluate_expression(&to_eval, &expected, &token);
+                            if res.1.is_none() {
+                                res.0
+                            } else {
+                                self.throw_error(self.tokens[0].line_num, res.1.unwrap());
+                                return Expression::Literal(Literal::Float(0.0));
+                            }
+                        }
                         _ => {
-                            value = Ok(0);
                             self.throw_error(self.tokens[1].line_num, keyword_error_msg);
+                            return Expression::Literal(Literal::Float(0.0));
                         }
                     }
-
-                    Expression::Literal(Literal::NumericLiteral(value.unwrap_or(0)))
                 } else {
-                    // We can't parse the expression on the spot if an identifier is included
-                    // This means we have to wait until the environment can access variables to build a BinaryExpression
-                    Expression::Literal(Literal::NumericLiteral(value.unwrap_or(0)))
-                }
+                    match expected {
+                        Type::Short if v as i16 as f32 == v => {
+                            Expression::Literal(Literal::Short(v as i16))
+                        }
+                        Type::Int if v as i32 as f32 == v => {
+                            Expression::Literal(Literal::Int(v as i32))
+                        }
+                        Type::Large if v as i64 as f32 == v => {
+                            Expression::Literal(Literal::Large(v as i64))
+                        }
+                        Type::Float => Expression::Literal(Literal::Float(v)),
+                        _ => {
+                            let message = format!(
+                                "{} Expected '{:#?}' found 'int'",
+                                ERROR_INDICATOR, token.token_type
+                            );
 
+                            self.throw_error(self.tokens[0].line_num, message);
+
+                            Expression::Literal(Literal::Float(v))
+                        }
+                    }
+                }
                 // For now, just parse the current token as i32
             }
             _ => {
@@ -171,8 +199,12 @@ impl Parser {
         }
     }
 
-    fn evaluate_expression(expr: &[String]) -> i32 {
-        let mut nums: Vec<i32> = Vec::new();
+    fn evaluate_expression(
+        expr: &[String],
+        expected: &Type,
+        token: &Token,
+    ) -> (Expression, Option<String>) {
+        let mut nums: Vec<f32> = Vec::new();
         let mut ops: Vec<&str> = Vec::new();
 
         let mut i = 0;
@@ -182,7 +214,7 @@ impl Parser {
                     ops.push(&expr[i]);
                 }
                 _ => {
-                    let num = expr[i].parse::<i32>();
+                    let num = expr[i].parse::<f32>();
                     if let Ok(value) = num {
                         nums.push(value);
                     }
@@ -219,7 +251,37 @@ impl Parser {
             }
         }
 
-        result
+        let message_wrong_type = format!(
+            "{} \x1b[1mExpected '{:#?}' found 'int'\x1b[0m",
+            ERROR_INDICATOR, token.token_type
+        );
+
+        let message = match expected {
+            Type::Short if (result as i16 as f32) != result => Some(format!(
+                "{} \x1b[1mLoss of precision: 'float' value is out of range for 'short'",
+                ERROR_INDICATOR
+            )),
+            Type::Int if (result as i32 as f32) != result => Some(format!(
+                "{} \x1b[1mLoss of precision: 'float' value is out of range for 'int'",
+                ERROR_INDICATOR
+            )),
+            Type::Large if (result as i64 as f32) != result => Some(format!(
+                "{} \x1b[1mLoss of precision: 'float' value is out of range for 'large'",
+                ERROR_INDICATOR
+            )),
+            _ => None,
+        };
+
+        match expected {
+            Type::Short => (Expression::Literal(Literal::Short(result as i16)), message),
+            Type::Int => (Expression::Literal(Literal::Int(result as i32)), message),
+            Type::Large => (Expression::Literal(Literal::Large(result as i64)), message),
+            Type::Float => (Expression::Literal(Literal::Float(result)), None),
+            _ => (
+                Expression::Literal(Literal::Float(result)),
+                Some(message_wrong_type),
+            ),
+        }
     }
 
     fn parse_expression(_tokens: &Vec<String>) -> Literal {

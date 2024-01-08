@@ -23,7 +23,7 @@ impl Parser {
         //FIX ME: parse_literal panics when type for tuple is invalid
         //i.e: x: (this)
         //above panics ^^^
-        let value = self.parse_literal(self.tokens[self.cursor].clone());
+        let value = self.parse_literal(self.tokens[self.cursor].clone(), &final_type);
         let message = format!(
             "{} \x1b[1mExpected semicolon following variable '{}'\x1b[0m",
             ERROR_INDICATOR, name
@@ -41,8 +41,8 @@ impl Parser {
             false => self.nodes.push(Ast::Statement(variable)),
             true => res = Some(Ast::Statement(variable)),
         }
-
         self.tokens.drain(0..=self.cursor); // Adjusted token removal range
+        self.cursor = 0;
 
         res
     }

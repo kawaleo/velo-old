@@ -53,7 +53,10 @@ pub enum Expression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
-    NumericLiteral(i32),
+    Short(i16),
+    Int(i32),
+    Large(i64),
+    Float(f32),
     StringLiteral(String),
     Null,
 }
@@ -68,7 +71,7 @@ pub struct BinaryExpression {
 impl From<Literal> for Ast {
     fn from(literal: Literal) -> Self {
         match literal {
-            Literal::NumericLiteral(val) => Ast::Statement(Statement::VariableAssignment {
+            Literal::Float(val) => Ast::Statement(Statement::VariableAssignment {
                 name: "".to_string(),
                 var_type: Type::Void,
                 value: Expression::Literal(Literal::Null),
