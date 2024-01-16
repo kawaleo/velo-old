@@ -35,7 +35,10 @@ impl Parser {
                 TokenType::Const => {
                     self.variable_assignment(false, None, true);
                 }
-                TokenType::Func => self.function_declaration(),
+                TokenType::Identifier => match self.tokens[1].token_type {
+                    TokenType::DoubleColon => self.function_declaration(),
+                    _ => unimplemented!(),
+                },
                 TokenType::Semicolon => {
                     self.tokens.remove(0);
                 }

@@ -9,7 +9,6 @@ pub enum TokenType {
     Null,
 
     // Keywords
-    Func,
     Const,
     Let,
     If,
@@ -50,6 +49,7 @@ pub enum TokenType {
     Semicolon,
     Dot,
     Colon,
+    DoubleColon,
     Arrow,
     Tilde,
     BitwiseOr,
@@ -83,7 +83,7 @@ impl TokenType {
 }
 
 pub struct KeywordMap {
-    data: [(&'static str, TokenType); 19],
+    data: [(&'static str, TokenType); 18],
 }
 
 impl KeywordMap {
@@ -92,7 +92,6 @@ impl KeywordMap {
             data: [
                 ("const", TokenType::Const),
                 ("let", TokenType::Let),
-                ("func", TokenType::Func),
                 ("if", TokenType::If),
                 ("else", TokenType::Else),
                 ("elif", TokenType::ElseIf),
@@ -287,7 +286,10 @@ impl Lexer {
                 ',' => tokens.push(self.make_token(self.source[0], TokenType::Comma)),
                 ';' => tokens.push(self.make_token(self.source[0], TokenType::Semicolon)),
                 '.' => tokens.push(self.make_token(self.source[0], TokenType::Dot)),
-                ':' => tokens.push(self.make_token(self.source[0], TokenType::Colon)),
+                ':' => match self.source[1] {
+                    ':' => tokens.push(self.make_long_token("::", TokenType::DoubleColon)),
+                    _ => tokens.push(self.make_token(self.source[0], TokenType::Colon)),
+                },
                 '~' => tokens.push(self.make_token(self.source[0], TokenType::Tilde)),
 
                 '|' => match self.source[1] {

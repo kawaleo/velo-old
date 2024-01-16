@@ -159,28 +159,9 @@ impl Parser {
     }
 
     fn parse_function_name(&mut self) -> String {
-        let mut name = String::new();
-        match self.tokens.get(1) {
-            Some(next_token) if next_token.token_type == TokenType::Identifier => {
-                name = next_token.lexeme.clone();
-                self.cursor += 1;
-            }
-            Some(next_token) => {
-                let message = format!(
-                    "{} \x1b[1mCannot declare function with name of type {}",
-                    ERROR_INDICATOR,
-                    TokenType::to_string(next_token.token_type)
-                );
-                self.throw_error(next_token.line_num, message);
-            }
-            None => {
-                let message = format!(
-                    "{} \x1b[1mUnexpected end of input while parsing function declaration\x1b[0m",
-                    ERROR_INDICATOR,
-                );
-                self.throw_error(self.tokens[0].line_num, message);
-            }
-        }
+        let name = self.tokens[0].lexeme.clone();
+
+        self.cursor += 1;
         name
     }
 
