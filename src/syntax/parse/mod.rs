@@ -127,6 +127,8 @@ impl Parser {
                     ERROR_INDICATOR, token.lexeme,
                 );
 
+                let is_f32 = token.lexeme.contains('.');
+
                 let v = token
                     .lexeme
                     .parse::<f32>()
@@ -226,31 +228,34 @@ impl Parser {
                             }
                         }
                     } else {
-                        match v {
-                            // Check if it's a float and return Float if so
-                            val if val.is_sign_positive() && val.fract() != 0.0 => {
-                                (Expression::Literal(Literal::Float(val)), Some(Type::Float))
+                        if !is_f32 {
+                            match v {
+                                // Check if it's a float and return Float if so
+                                val if val.is_sign_positive() && val.fract() != 0.0 => {
+                                    (Expression::Literal(Literal::Float(val)), Some(Type::Float))
+                                }
+                                // Check if it's a whole number and fits into i16
+                                val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
+                                    Expression::Literal(Literal::Short(val as i16)),
+                                    Some(Type::Short),
+                                ),
+                                // Check if it's a whole number and fits into i32
+                                val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
+                                    Expression::Literal(Literal::Int(val as i32)),
+                                    Some(Type::Int),
+                                ),
+                                // For values larger than i32 or with decimal parts, use i64 (Large)
+                                val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
+                                    Expression::Literal(Literal::Large(val as i64)),
+                                    Some(Type::Large),
+                                ),
+                                _ => (Expression::Literal(Literal::Float(v)), Some(Type::Float)), // todo: throw error
                             }
-                            // Check if it's a whole number and fits into i16
-                            val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
-                                Expression::Literal(Literal::Short(val as i16)),
-                                Some(Type::Short),
-                            ),
-                            // Check if it's a whole number and fits into i32
-                            val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
-                                Expression::Literal(Literal::Int(val as i32)),
-                                Some(Type::Int),
-                            ),
-                            // For values larger than i32 or with decimal parts, use i64 (Large)
-                            val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
-                                Expression::Literal(Literal::Large(val as i64)),
-                                Some(Type::Large),
-                            ),
-                            _ => (Expression::Literal(Literal::Float(v)), Some(Type::Float)), // todo: throw error
+                        } else {
+                            (Expression::Literal(Literal::Float(v)), Some(Type::Float))
                         }
                     }
                 }
-                // For now, just parse the current token as i32
             }
             _ => {
                 let message = format!(
