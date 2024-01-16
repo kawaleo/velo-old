@@ -50,6 +50,7 @@ pub enum TokenType {
     Dot,
     Colon,
     DoubleColon,
+    ColonEq,
     Arrow,
     Tilde,
     BitwiseOr,
@@ -288,6 +289,7 @@ impl Lexer {
                 '.' => tokens.push(self.make_token(self.source[0], TokenType::Dot)),
                 ':' => match self.source[1] {
                     ':' => tokens.push(self.make_long_token("::", TokenType::DoubleColon)),
+                    '=' => tokens.push(self.make_long_token(":=", TokenType::ColonEq)),
                     _ => tokens.push(self.make_token(self.source[0], TokenType::Colon)),
                 },
                 '~' => tokens.push(self.make_token(self.source[0], TokenType::Tilde)),

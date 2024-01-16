@@ -37,6 +37,10 @@ impl Parser {
                 }
                 TokenType::Identifier => match self.tokens[1].token_type {
                     TokenType::DoubleColon => self.function_declaration(),
+                    TokenType::ColonEq => {
+                        self.variable_assignment(false, None, false);
+                    }
+                    TokenType::Eq => unimplemented!(), // for not reassignment
                     _ => unimplemented!(),
                 },
                 TokenType::Semicolon => {
