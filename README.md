@@ -10,6 +10,7 @@ velo is designed to be a simple and easily maintainable general purpose programm
 
 > But why?
 > I created velo to teach myself how to write an interpreter
+
 > But still, why?
 > I guess I got bored
 
