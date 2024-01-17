@@ -11,7 +11,6 @@ impl Parser {
         mk_const: bool,
         in_fn: bool,
     ) -> Option<Statement> {
-        println!("{:#?}", self.tokens.clone());
         let mut name = self.parse_var_name(mk_const, in_fn);
 
         let mut infer_type = true;
@@ -42,12 +41,19 @@ impl Parser {
             _ => {}
         }
         let message = format!(
-            "{} \x1b[1mExpected semicolon following variable '{}'\x1b[0m",
-            ERROR_INDICATOR, name
+            "{} \x1b[1mExpected semicolon following variable '{}', found {}\x1b[0m",
+            ERROR_INDICATOR,
+            name,
+            self.tokens[self.cursor].lexeme.clone()
         );
 
-        self.expect(TokenType::Semicolon, self.cursor, message);
-        self.cursor += 1;
+        if in_fn {
+            self.expect(TokenType::Semicolon, self.cursor, message);
+            self.cursor += 1;
+        } else {
+            self.expect(TokenType::Semicolon, self.cursor + 1, message);
+            self.cursor += 1;
+        }
 
         let variable = Statement::VariableAssignment {
             constant: mk_const,
@@ -69,7 +75,6 @@ impl Parser {
 
         res
     }
-
     pub fn parse_var_name(&mut self, is_const: bool, in_fn: bool) -> String {
         if !is_const {
             let name = self.tokens[self.cursor].lexeme.clone();

@@ -1,3 +1,6 @@
-x := 1;
-y := 2;
-main :: (x int, y int) { }
+z := 1;
+
+fun main() {
+  x := 1;
+  y := 2;
+}

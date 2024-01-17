@@ -3,6 +3,31 @@
 use super::lexer::{TokenType, Type};
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum AstRework {
+    VariableAssignment {
+        constant: bool,
+        name: String,
+        var_type: Type,
+        value: Expression,
+    },
+
+    Function {
+        name: String,
+        params: Vec<(String, Type)>,
+        body: FunctionBody,
+        ret_type: Type,
+    },
+
+    Literal(Literal),
+
+    BinaryOp {
+        lhs: Box<Ast>,
+        op: TokenType,
+        rhs: Box<Ast>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Ast {
     Expression(Expression),
     Statement(Statement),
@@ -65,13 +90,6 @@ pub enum Literal {
     Bool(bool),
     StringLiteral(String),
     Null,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct BinaryExpression {
-    pub lhs: Box<Ast>,
-    pub operator: TokenType,
-    pub rhs: Box<Ast>,
 }
 
 impl From<Literal> for Ast {
