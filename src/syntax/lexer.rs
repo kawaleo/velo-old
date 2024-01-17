@@ -1,4 +1,5 @@
 use super::error::ERROR_INDICATOR;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenType {
@@ -83,6 +84,16 @@ impl TokenType {
     }
 }
 
+pub fn from_string(s: &str) -> TokenType {
+    match s {
+        "+" => TokenType::Add,
+        "-" => TokenType::Sub,
+        "*" => TokenType::Mul,
+        "/" => TokenType::Div,
+        _ => todo!(),
+    }
+}
+
 pub struct KeywordMap {
     data: [(&'static str, TokenType); 18],
 }
@@ -124,7 +135,7 @@ impl KeywordMap {
 
 pub const KEYWORDS: KeywordMap = KeywordMap::new();
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub line_num: usize,

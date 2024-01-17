@@ -49,7 +49,11 @@ impl FunctionBody {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Literal),
-    BinaryOp(Box<Expression>, Box<Expression>, String),
+    BinaryOp {
+        lhs: Box<Ast>,
+        op: TokenType,
+        rhs: Box<Ast>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

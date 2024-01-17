@@ -4,7 +4,7 @@ mod stmt;
 use super::ast::Expression;
 use super::ast::*;
 use super::error::{ErrorType::ParseError, VeloError, ERROR_INDICATOR};
-use super::lexer::{KeywordMap, Token, TokenType, Type, KEYWORDS};
+use super::lexer::{from_string, KeywordMap, Token, TokenType, Type, KEYWORDS};
 
 use std::process;
 
@@ -143,7 +143,7 @@ impl Parser {
                     .unwrap();
 
                 if has_operator {
-                    let mut to_eval: Vec<String> = Vec::new();
+                    let mut to_eval: Vec<Token> = Vec::new();
 
                     #[allow(unused)]
                     let mut includes_identifiers = false;
@@ -151,7 +151,7 @@ impl Parser {
                     let mut keyword_fault = TokenType::Null;
                     let mut current_index = self.cursor + 1;
 
-                    to_eval.push(self.tokens[current_index - 1].lexeme.clone());
+                    to_eval.push(self.tokens[current_index - 1].clone());
 
                     while let Some(next_token) = self.tokens.get(current_index) {
                         if [
@@ -171,11 +171,11 @@ impl Parser {
                                 println!("keyword: {:#?}", KEYWORDS.get(&next_token.lexeme))
                             }
                             if next_token.token_type == TokenType::Identifier {
-                                to_eval.push(next_token.lexeme.clone());
+                                to_eval.push(next_token.clone());
                                 includes_identifiers = true;
                                 current_index += 1;
                             } else {
-                                to_eval.push(next_token.lexeme.clone());
+                                to_eval.push(next_token.clone());
                                 current_index += 1;
                             }
                         } else {
@@ -193,17 +193,8 @@ impl Parser {
 
                     match keyword_error {
                         false => {
-                            let res =
-                                Self::evaluate_expression(&to_eval, &expected, &token, infer_type);
-                            if res.1.is_none() {
-                                (res.0, Some(Type::Float))
-                            } else {
-                                self.throw_error(self.tokens[0].line_num, res.1.unwrap());
-                                return (
-                                    Expression::Literal(Literal::Float(0.0)),
-                                    Some(Type::Float),
-                                );
-                            }
+                            let res = Self::parse_expression(to_eval);
+                            (res, Some(Type::Float))
                         }
                         _ => {
                             self.throw_error(self.tokens[1].line_num, keyword_error_msg);
@@ -211,56 +202,31 @@ impl Parser {
                         }
                     }
                 } else {
-                    if !infer_type {
-                        match expected {
-                            Type::Short if v as i16 as f32 == v => {
-                                (Expression::Literal(Literal::Short(v as i16)), None)
+                    if !is_f32 {
+                        match v {
+                            // Check if it's a float and return Float if so
+                            val if val.is_sign_positive() && val.fract() != 0.0 => {
+                                (Expression::Literal(Literal::Float(val)), Some(Type::Float))
                             }
-                            Type::Int if v as i32 as f32 == v => {
-                                (Expression::Literal(Literal::Int(v as i32)), None)
-                            }
-                            Type::Large if v as i64 as f32 == v => {
-                                (Expression::Literal(Literal::Large(v as i64)), None)
-                            }
-                            Type::Float => (Expression::Literal(Literal::Float(v)), None),
-                            _ => {
-                                let message = format!(
-                                    "{} Expected '{:#?}' found 'int'",
-                                    ERROR_INDICATOR, token.token_type
-                                );
-
-                                self.throw_error(self.tokens[0].line_num, message);
-
-                                (Expression::Literal(Literal::Float(v)), Some(Type::Float))
-                            }
+                            // Check if it's a whole number and fits into i16
+                            val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
+                                Expression::Literal(Literal::Short(val as i16)),
+                                Some(Type::Short),
+                            ),
+                            // Check if it's a whole number and fits into i32
+                            val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
+                                Expression::Literal(Literal::Int(val as i32)),
+                                Some(Type::Int),
+                            ),
+                            // For values larger than i32 or with decimal parts, use i64 (Large)
+                            val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
+                                Expression::Literal(Literal::Large(val as i64)),
+                                Some(Type::Large),
+                            ),
+                            _ => (Expression::Literal(Literal::Float(v)), Some(Type::Float)), // todo: throw error
                         }
                     } else {
-                        if !is_f32 {
-                            match v {
-                                // Check if it's a float and return Float if so
-                                val if val.is_sign_positive() && val.fract() != 0.0 => {
-                                    (Expression::Literal(Literal::Float(val)), Some(Type::Float))
-                                }
-                                // Check if it's a whole number and fits into i16
-                                val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
-                                    Expression::Literal(Literal::Short(val as i16)),
-                                    Some(Type::Short),
-                                ),
-                                // Check if it's a whole number and fits into i32
-                                val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
-                                    Expression::Literal(Literal::Int(val as i32)),
-                                    Some(Type::Int),
-                                ),
-                                // For values larger than i32 or with decimal parts, use i64 (Large)
-                                val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
-                                    Expression::Literal(Literal::Large(val as i64)),
-                                    Some(Type::Large),
-                                ),
-                                _ => (Expression::Literal(Literal::Float(v)), Some(Type::Float)), // todo: throw error
-                            }
-                        } else {
-                            (Expression::Literal(Literal::Float(v)), Some(Type::Float))
-                        }
+                        (Expression::Literal(Literal::Float(v)), Some(Type::Float))
                     }
                 }
             }
@@ -277,141 +243,43 @@ impl Parser {
         }
     }
 
-    fn evaluate_expression(
-        expr: &[String],
-        expected: &Type,
-        token: &Token,
-        infer_type: bool,
-    ) -> (Expression, Option<String>, Option<Type>) {
-        let mut nums: Vec<f32> = Vec::new();
-        let mut ops: Vec<&str> = Vec::new();
+    fn parse_expression(tokens: Vec<Token>) -> Expression {
+        let mut nums: Vec<Expression> = Vec::new();
+        let mut ops: Vec<TokenType> = Vec::new();
 
         let mut i = 0;
-        while i < expr.len() {
-            match expr[i].as_str() {
-                "+" | "-" | "*" | "/" => {
-                    ops.push(&expr[i]);
+        while i < tokens.len() {
+            match tokens[i].token_type {
+                TokenType::Add | TokenType::Sub | TokenType::Mul | TokenType::Div => {
+                    ops.push(tokens[i].token_type.clone())
+                }
+                TokenType::Identifier => {
+                    let num = tokens[i].lexeme.clone();
+                    nums.push(Expression::Literal(Literal::StringLiteral(num)))
                 }
                 _ => {
-                    let num = expr[i].parse::<f32>();
+                    let num = tokens[i].lexeme.clone().parse::<f32>();
                     if let Ok(value) = num {
-                        nums.push(value);
+                        nums.push(Expression::Literal(Literal::Float(num.unwrap())))
                     }
                 }
             }
             i += 1;
         }
 
-        // First, perform multiplication and division
-        let mut j = 0;
-        while j < ops.len() {
-            if ops[j] == "*" {
-                let res = nums[j] * nums[j + 1];
-                nums[j] = res;
-                nums.remove(j + 1);
-                ops.remove(j);
-            } else if ops[j] == "/" {
-                let res = nums[j] / nums[j + 1];
-                nums[j] = res;
-                nums.remove(j + 1);
-                ops.remove(j);
-            } else {
-                j += 1;
-            }
-        }
-
-        // Then, perform addition and subtraction
-        let mut result = nums[0];
-        for k in 0..ops.len() {
-            if ops[k] == "+" {
-                result += nums[k + 1];
-            } else if ops[k] == "-" {
-                result -= nums[k + 1];
-            }
-        }
-
-        let message_wrong_type = format!(
-            "{} \x1b[1mExpected '{:#?}' found 'int'\x1b[0m",
-            ERROR_INDICATOR, token.token_type
-        );
-
-        if !infer_type {
-            let message = match expected {
-                Type::Short if (result as i16 as f32) != result => Some(format!(
-                    "{} \x1b[1mLoss of precision: 'float' value is out of range for 'short'",
-                    ERROR_INDICATOR
-                )),
-                Type::Int if (result as i32 as f32) != result => Some(format!(
-                    "{} \x1b[1mLoss of precision: 'float' value is out of range for 'int'",
-                    ERROR_INDICATOR
-                )),
-                Type::Large if (result as i64 as f32) != result => Some(format!(
-                    "{} \x1b[1mLoss of precision: 'float' value is out of range for 'large'",
-                    ERROR_INDICATOR
-                )),
-                _ => None,
+        let mut result_expr = nums.pop().unwrap();
+        while let Some(op) = ops.pop() {
+            let rhs_expr = nums.pop().unwrap();
+            result_expr = Expression::BinaryOp {
+                lhs: Box::new(Ast::Expression(result_expr)),
+                op,
+                rhs: Box::new(Ast::Expression(rhs_expr)),
             };
-
-            match expected {
-                Type::Short => (
-                    Expression::Literal(Literal::Short(result as i16)),
-                    message,
-                    None,
-                ),
-                Type::Int => (
-                    Expression::Literal(Literal::Int(result as i32)),
-                    message,
-                    None,
-                ),
-                Type::Large => (
-                    Expression::Literal(Literal::Large(result as i64)),
-                    message,
-                    None,
-                ),
-                Type::Float => (Expression::Literal(Literal::Float(result)), None, None),
-                _ => (
-                    Expression::Literal(Literal::Float(result)),
-                    Some(message_wrong_type),
-                    None,
-                ),
-            }
-        } else {
-            match result {
-                // Check if it's a float and return Float if so
-                val if val.is_sign_positive() && val.fract() != 0.0 => (
-                    Expression::Literal(Literal::Float(val)),
-                    None,
-                    Some(Type::Float),
-                ),
-                // Check if it's a whole number and fits into i16
-                val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
-                    Expression::Literal(Literal::Short(val as i16)),
-                    None,
-                    Some(Type::Short),
-                ),
-                // Check if it's a whole number and fits into i32
-                val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
-                    Expression::Literal(Literal::Int(val as i32)),
-                    None,
-                    Some(Type::Int),
-                ),
-                // For values larger than i32 or with decimal parts, use i64 (Large)
-                val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
-                    Expression::Literal(Literal::Large(result as i64)),
-                    None,
-                    Some(Type::Large),
-                ),
-                _ => (
-                    Expression::Literal(Literal::Float(result)),
-                    Some(message_wrong_type),
-                    None,
-                ),
-            }
         }
-    }
 
-    fn parse_expression(_tokens: &Vec<String>) -> Literal {
-        Literal::Null
+        // Remaining code...
+
+        result_expr
     }
 
     pub fn expect(&mut self, tok_type: TokenType, cursor: usize, error_message: String) {
