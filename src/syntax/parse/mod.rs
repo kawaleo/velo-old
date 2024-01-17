@@ -86,7 +86,12 @@ impl Parser {
         token: Token,
         expected: &Type,
         infer_type: bool,
+        cursor: Option<usize>,
     ) -> (Expression, Option<Type>) {
+        match cursor.is_some() {
+            true => self.cursor = cursor.unwrap(),
+            _ => {}
+        }
         match token.token_type {
             TokenType::True => {
                 if expected != &Type::Bool && !infer_type {
@@ -138,12 +143,11 @@ impl Parser {
                     .parse::<f32>()
                     .map_err(|_| self.throw_error(self.tokens[0].line_num, message))
                     .unwrap();
+                println!("just parsed v");
 
                 if has_operator {
                     let mut to_eval: Vec<Token> = Vec::new();
 
-                    #[allow(unused)]
-                    let mut includes_identifiers = false;
                     let mut keyword_error = false;
                     let mut keyword_fault = TokenType::Null;
                     let mut current_index = self.cursor + 1;
@@ -151,6 +155,7 @@ impl Parser {
                     to_eval.push(self.tokens[current_index - 1].clone());
 
                     while let Some(next_token) = self.tokens.get(current_index) {
+                        println!("while loop iter {}", current_index);
                         if [
                             TokenType::NumericLiteral,
                             TokenType::Identifier,
@@ -169,7 +174,6 @@ impl Parser {
                             }
                             if next_token.token_type == TokenType::Identifier {
                                 to_eval.push(next_token.clone());
-                                includes_identifiers = true;
                                 current_index += 1;
                             } else {
                                 to_eval.push(next_token.clone());

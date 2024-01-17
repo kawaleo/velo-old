@@ -34,7 +34,11 @@ impl Parser {
             _ => self.tokens[self.cursor].clone(),
         };
 
-        value = self.parse_literal(tok, &Type::Void, infer_type);
+        if in_fn {
+            self.cursor -= 1
+        }
+
+        value = self.parse_literal(tok, &Type::Void, infer_type, Some(self.cursor));
 
         match value.1.is_some() {
             true => final_type = value.1.unwrap(),
@@ -46,14 +50,6 @@ impl Parser {
             name,
             self.tokens[self.cursor].lexeme.clone()
         );
-
-        if in_fn {
-            self.expect(TokenType::Semicolon, self.cursor, message);
-            self.cursor += 1;
-        } else {
-            self.expect(TokenType::Semicolon, self.cursor + 1, message);
-            self.cursor += 1;
-        }
 
         let variable = Statement::VariableAssignment {
             constant: mk_const,
