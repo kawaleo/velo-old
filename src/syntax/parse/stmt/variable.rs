@@ -46,6 +46,9 @@ impl Parser {
             ERROR_INDICATOR, name
         );
 
+        self.expect(TokenType::Semicolon, self.cursor, message);
+        self.cursor += 1;
+
         let variable = Statement::VariableAssignment {
             constant: mk_const,
             name,
@@ -59,8 +62,10 @@ impl Parser {
             false => self.nodes.push(Ast::Statement(variable)),
             true => res = Some(variable),
         }
-        self.tokens.drain(0..=self.cursor); // Adjusted token removal range
-        self.cursor = 0;
+        if !in_fn {
+            self.tokens.drain(0..=self.cursor); // Adjusted token removal range
+            self.cursor = 0;
+        }
 
         res
     }
