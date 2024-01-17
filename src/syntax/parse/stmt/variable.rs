@@ -67,6 +67,4 @@ impl Parser {
             name
         }
     }
-
-    // THIS IS ARCHIVED. USING FOR REFERENCES AT THE MOMENT
 }

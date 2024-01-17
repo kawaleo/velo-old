@@ -29,10 +29,7 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Ast>, VeloError> {
         while !self.tokens.is_empty() {
             match self.tokens[0].token_type {
-                TokenType::Let => {
-                    self.variable_assignment(false, None, false);
-                }
-                TokenType::Const => {
+                TokenType::Immut => {
                     self.variable_assignment(false, None, true);
                 }
                 TokenType::Identifier => match self.tokens[1].token_type {
