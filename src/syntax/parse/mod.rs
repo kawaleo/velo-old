@@ -277,8 +277,6 @@ impl Parser {
             };
         }
 
-        // Remaining code...
-
         result_expr
     }
 
