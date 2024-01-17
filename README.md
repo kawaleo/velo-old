@@ -1,6 +1,6 @@
-# velo
+# Velo
 
-A minimalistic programming language I made in my spare time
+A programming language made in my spare time
 
 > Note: If you would like to contribute, see [CONTRIBUTING.md](CONTRIBUTING.md)
 
