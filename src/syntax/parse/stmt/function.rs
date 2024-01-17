@@ -38,6 +38,15 @@ impl Parser {
                                 break;
                             }
                         }
+                        TokenType::Identifier => match self.tokens[body_cursor + 1].token_type {
+                            TokenType::ColonEq => {
+                                body_cursor += 1;
+                                let var =
+                                    self.variable_assignment(true, Some(body_cursor), false, true);
+                                stmts.push(var.unwrap())
+                            }
+                            _ => unimplemented!(),
+                        },
 
                         _ => {}
                     }

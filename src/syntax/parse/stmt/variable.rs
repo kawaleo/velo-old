@@ -1,5 +1,5 @@
 use super::super::Parser;
-use crate::syntax::ast::{Ast, Expression, Statement};
+use crate::syntax::ast::{Ast, Expression, Literal, Statement};
 use crate::syntax::error::ERROR_INDICATOR;
 use crate::syntax::lexer::{Token, TokenType, Type};
 
@@ -9,8 +9,10 @@ impl Parser {
         ret: bool,
         cursor: Option<usize>,
         mk_const: bool,
-    ) -> Option<Ast> {
-        let mut name = self.parse_var_name(mk_const);
+        in_fn: bool,
+    ) -> Option<Statement> {
+        println!("{:#?}", self.tokens.clone());
+        let mut name = self.parse_var_name(mk_const, in_fn);
 
         let mut infer_type = true;
 
@@ -27,7 +29,13 @@ impl Parser {
         //FIX ME: parse_literal panics when type for tuple is invalid
         //i.e: x: (this)
         //above panics ^^^
-        let value = self.parse_literal(self.tokens[self.cursor].clone(), &Type::Void, infer_type);
+        let mut value = (Expression::Literal(Literal::Null), None);
+        let tok = match in_fn {
+            true => self.tokens[self.cursor - 1].clone(),
+            _ => self.tokens[self.cursor].clone(),
+        };
+
+        value = self.parse_literal(tok, &Type::Void, infer_type);
 
         match value.1.is_some() {
             true => final_type = value.1.unwrap(),
@@ -49,7 +57,7 @@ impl Parser {
 
         match ret {
             false => self.nodes.push(Ast::Statement(variable)),
-            true => res = Some(Ast::Statement(variable)),
+            true => res = Some(variable),
         }
         self.tokens.drain(0..=self.cursor); // Adjusted token removal range
         self.cursor = 0;
@@ -57,9 +65,9 @@ impl Parser {
         res
     }
 
-    pub fn parse_var_name(&mut self, is_const: bool) -> String {
+    pub fn parse_var_name(&mut self, is_const: bool, in_fn: bool) -> String {
         if !is_const {
-            let name = self.tokens[0].lexeme.clone();
+            let name = self.tokens[self.cursor].lexeme.clone();
             name
         } else {
             let name = self.tokens[1].lexeme.clone(); // todo handle case where no name

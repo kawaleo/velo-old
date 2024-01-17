@@ -30,12 +30,12 @@ impl Parser {
         while !self.tokens.is_empty() {
             match self.tokens[0].token_type {
                 TokenType::Immut => {
-                    self.variable_assignment(false, None, true);
+                    self.variable_assignment(false, None, true, false);
                 }
                 TokenType::Identifier => match self.tokens[1].token_type {
                     TokenType::DoubleColon => self.function_declaration(),
                     TokenType::ColonEq => {
-                        self.variable_assignment(false, None, false);
+                        self.variable_assignment(false, None, false, false);
                     }
                     TokenType::Eq => unimplemented!(), // for not reassignment
                     _ => unimplemented!(),
