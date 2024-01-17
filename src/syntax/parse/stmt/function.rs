@@ -181,13 +181,13 @@ impl Parser {
 
                         if let Some(next_token) = self.tokens.get(param_cursor + 1) {
                             // Checking for parameter type declaration
-                            if next_token.token_type == TokenType::Colon {
-                                if let Some(type_token) = self.tokens.get(param_cursor + 2) {
+                            if next_token.token_type == TokenType::Identifier {
+                                if let Some(type_token) = self.tokens.get(param_cursor + 1) {
                                     // Parsing parameter type
                                     let param_type = Type::from_string(type_token.lexeme.clone());
                                     params.push((param_name, param_type));
 
-                                    param_cursor += 3; // Move cursor past parameter type
+                                    param_cursor += 2; // Move cursor past parameter type
                                     if let Some(next_next_token) = self.tokens.get(param_cursor) {
                                         match next_next_token.token_type {
                                             TokenType::Comma => param_cursor += 1,
@@ -210,8 +210,8 @@ impl Parser {
                                 } else {
                                     // Handle missing parameter type
                                     let message = format!(
-                                        "{} \x1b[1mExpected parameter type after ':'\x1b[0m",
-                                        ERROR_INDICATOR,
+                                        "{} \x1b[1mExpected parameter type after '{}'\x1b[0m",
+                                        ERROR_INDICATOR, param_name
                                     );
                                     self.throw_error(next_token.line_num, message);
                                     self.tokens.clear();
