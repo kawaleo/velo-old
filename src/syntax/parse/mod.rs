@@ -32,8 +32,8 @@ impl Parser {
                 TokenType::Immut => {
                     self.variable_assignment(false, None, true, false);
                 }
+                TokenType::Function => self.function_declaration(),
                 TokenType::Identifier => match self.tokens[1].token_type {
-                    TokenType::DoubleColon => self.function_declaration(),
                     TokenType::ColonEq => {
                         self.variable_assignment(false, None, false, false);
                     }

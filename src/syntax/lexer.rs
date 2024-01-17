@@ -10,6 +10,7 @@ pub enum TokenType {
     Null,
 
     // Keywords
+    Function,
     Immut,
     If,
     Else,
@@ -94,13 +95,14 @@ pub fn from_string(s: &str) -> TokenType {
 }
 
 pub struct KeywordMap {
-    data: [(&'static str, TokenType); 17],
+    data: [(&'static str, TokenType); 18],
 }
 
 impl KeywordMap {
     const fn new() -> Self {
         Self {
             data: [
+                ("fun", TokenType::Function),
                 ("immut", TokenType::Immut),
                 ("if", TokenType::If),
                 ("else", TokenType::Else),
