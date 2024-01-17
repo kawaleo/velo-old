@@ -8,11 +8,7 @@ A minimalistic programming language I made in my spare time
 
 velo is designed to be a simple and easily maintainable general purpose programming language similar to those of `javascript` and `python`
 
-> But why?
-> I created velo to teach myself how to write an interpreter
-
-> But still, why?
-> I guess I got bored
+> But why?<br>I created velo to teach myself how to write an interpreter<br>But still, why?<br>I guess I got bored
 
 ## Compiling from Source
 
