@@ -56,9 +56,7 @@ fn repl() {
         let env = Environment::init();
         println!("{:#?}", env);
 
-        for node in parser.nodes {
-            evaluate(node, env.clone())
-        }
+        evaluate(parser.nodes, &mut env.clone());
 
         println!("{:#?}", ast);
     }
