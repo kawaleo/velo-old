@@ -8,11 +8,19 @@ pub fn evaluate(nodes: Vec<Ast>, env: &mut Environment) {
             Ast::Expression(expr) => match expr {
                 Expression::CallExpr { name, params } => {
                     println!("evaluating call expr");
-                    let is_lib = env.lib_functions.contains(&name);
+                    let mut is_lib = false;
+
+                    for lib in env.lib_functions.iter() {
+                        if name == lib.name {
+                            is_lib = true
+                        } else {
+                            continue;
+                        }
+                    }
 
                     if is_lib {
                         match name.as_str() {
-                            "print" => println!("{}", params[0]),
+                            "print" => println!("{:#?}", params[0]),
                             _ => unimplemented!(),
                         }
                     }
@@ -29,7 +37,6 @@ pub fn evaluate(nodes: Vec<Ast>, env: &mut Environment) {
                 } => todo!(),
                 _ => todo!(),
             },
-            _ => unimplemented!(),
         }
     }
 }

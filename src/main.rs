@@ -8,6 +8,7 @@ use syntax::lexer::Lexer;
 use syntax::parse::Parser;
 
 mod error;
+mod library;
 mod runtime;
 mod syntax;
 

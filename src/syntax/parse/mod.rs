@@ -29,6 +29,9 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Ast>, VeloError> {
         while !self.tokens.is_empty() {
             match self.tokens[0].token_type {
+                TokenType::Import => {
+                    self.parse_import();
+                }
                 TokenType::Immut => {
                     self.variable_assignment(false, None, true, false);
                 }
@@ -83,6 +86,34 @@ impl Parser {
         Ok(ast_nodes)
     }
 
+    pub fn parse_import(&mut self) {
+        self.cursor += 1; // `import`
+
+        if let Some(import_path) = self.tokens.get(self.cursor) {
+            if import_path.token_type != TokenType::String {
+                println!(
+                    "expected string for import path but found '{}'",
+                    TokenType::to_string(import_path.token_type)
+                );
+                process::exit(1);
+            }
+            self.cursor += 1;
+            let is_library = vec!["std/io, std"].contains(&import_path.lexeme.as_str());
+
+            let node = Ast::Statement(Statement::ImportPath {
+                path: import_path.lexeme.clone(),
+                is_library,
+            });
+
+            self.nodes.push(node)
+        } else {
+            println!("unexpected EOF");
+            process::exit(1)
+        }
+
+        self.tokens.drain(0..self.cursor);
+    }
+
     pub fn call_expr(&mut self) {
         let name = self.tokens[self.cursor].lexeme.clone();
         self.cursor += 2;
@@ -92,7 +123,7 @@ impl Parser {
         while let Some(param_token) = self.tokens.get(self.cursor) {
             match param_token.token_type {
                 TokenType::String => {
-                    params.push(param_token.lexeme.clone());
+                    params.push(Expression::StringLiteral(param_token.lexeme.clone()));
                     self.cursor += 1;
 
                     if let Some(next_token) = self.tokens.get(self.cursor) {
@@ -110,11 +141,8 @@ impl Parser {
                     }
                 }
                 TokenType::RParen => break,
-                _ => unimplemented!(),
-            }
 
-            if self.cursor >= self.tokens.len() {
-                break;
+                _ => unimplemented!(),
             }
         }
         println!("Made it to parsing call expr");
@@ -178,7 +206,6 @@ impl Parser {
                 to_eval.push(self.tokens[current_index - 1].clone());
 
                 while let Some(next_token) = self.tokens.get(current_index) {
-                    println!("while loop iter {}", current_index);
                     if [
                         TokenType::NumericLiteral,
                         TokenType::Identifier,

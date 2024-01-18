@@ -22,6 +22,10 @@ pub enum Statement {
         body: FunctionBody,
         ret_type: Type,
     },
+    ImportPath {
+        path: String,
+        is_library: bool,
+    },
     ExprStmt(Expression),
 }
 
@@ -58,7 +62,7 @@ pub enum Expression {
 
     CallExpr {
         name: String,
-        params: Vec<String>,
+        params: Vec<Expression>,
     },
 
     BinaryOp {

@@ -10,10 +10,10 @@ pub struct Environment {
     pub variables: HashMap<String, Expression>,
     pub constants: Vec<Expression>,
     pub functions: Vec<Statement>,
-    pub lib_functions: Vec<String>,
+    pub lib_functions: Vec<LibFunction>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LibFunction {
     pub name: String,
     pub param_len: Option<usize>,
@@ -21,7 +21,7 @@ pub struct LibFunction {
 
 impl Environment {
     pub fn init() -> Self {
-        let mut lib_functions: Vec<String> = vec!["print"].iter().map(|f| f.to_string()).collect();
+        let lib_functions = vec![Self::mk_lib("print", Some(1))];
 
         Environment {
             errors: Vec::new(),
@@ -30,6 +30,13 @@ impl Environment {
             constants: Vec::new(),
             functions: Vec::new(),
             lib_functions,
+        }
+    }
+
+    pub fn mk_lib(name: &str, len: Option<usize>) -> LibFunction {
+        LibFunction {
+            name: name.to_string(),
+            param_len: len,
         }
     }
 
