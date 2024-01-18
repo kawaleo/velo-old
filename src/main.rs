@@ -2,6 +2,8 @@ use std::io::{self, Write};
 use std::process;
 use std::{env, fs};
 
+use runtime::environment::Environment;
+use runtime::interpreter::evaluate;
 use syntax::lexer::Lexer;
 use syntax::parse::Parser;
 
@@ -50,6 +52,13 @@ fn repl() {
 
         let mut parser = Parser::new(tokens);
         let ast = parser.parse();
+
+        let env = Environment::init();
+        println!("{:#?}", env);
+
+        for node in parser.nodes {
+            evaluate(node, env.clone())
+        }
 
         println!("{:#?}", ast);
     }

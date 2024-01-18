@@ -90,11 +90,8 @@ impl Parser {
         let mut params = Vec::new();
 
         while let Some(param_token) = self.tokens.get(self.cursor) {
-            println!("{}", &param_token.lexeme.clone());
-            println!("{:?}", &param_token.token_type.clone());
-
             match param_token.token_type {
-                TokenType::Identifier => {
+                TokenType::String => {
                     params.push(param_token.lexeme.clone());
                     self.cursor += 1;
 

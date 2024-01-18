@@ -3,25 +3,25 @@ use std::collections::HashMap;
 use crate::error::{ErrorType::RuntimeError, VeloError, ERROR_INDICATOR};
 use crate::syntax::ast::{Expression, Statement};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environment {
-    errors: Vec<VeloError>,
-    parent: Option<Box<Environment>>,
-    variables: HashMap<String, Expression>,
-    constants: Vec<Expression>,
-    functions: Vec<Statement>,
-    lib_functions: Vec<LibFunction>,
+    pub errors: Vec<VeloError>,
+    pub parent: Option<Box<Environment>>,
+    pub variables: HashMap<String, Expression>,
+    pub constants: Vec<Expression>,
+    pub functions: Vec<Statement>,
+    pub lib_functions: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LibFunction {
-    name: String,
-    param_len: Option<usize>,
+    pub name: String,
+    pub param_len: Option<usize>,
 }
 
 impl Environment {
     pub fn init() -> Self {
-        Self::make_lib("print", Some(1));
+        let mut lib_functions: Vec<String> = vec!["print"].iter().map(|f| f.to_string()).collect();
 
         Environment {
             errors: Vec::new(),
@@ -29,14 +29,7 @@ impl Environment {
             variables: HashMap::new(),
             constants: Vec::new(),
             functions: Vec::new(),
-            lib_functions: Vec::new(),
-        }
-    }
-
-    fn make_lib(name: &str, param_len: Option<usize>) -> LibFunction {
-        LibFunction {
-            name: name.to_string(),
-            param_len,
+            lib_functions,
         }
     }
 
