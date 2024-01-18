@@ -37,6 +37,9 @@ impl Parser {
                     TokenType::ColonEq => {
                         self.variable_assignment(false, None, false, false);
                     }
+                    TokenType::LParen => {
+                        self.call_expr();
+                    }
                     TokenType::Eq => unimplemented!(), // for not reassignment
                     _ => unimplemented!(),
                 },
@@ -78,6 +81,52 @@ impl Parser {
         }
 
         Ok(ast_nodes)
+    }
+
+    pub fn call_expr(&mut self) {
+        let name = self.tokens[self.cursor].lexeme.clone();
+        self.cursor += 2;
+
+        let mut params = Vec::new();
+
+        while let Some(param_token) = self.tokens.get(self.cursor) {
+            println!("{}", &param_token.lexeme.clone());
+            println!("{:?}", &param_token.token_type.clone());
+
+            match param_token.token_type {
+                TokenType::Identifier => {
+                    params.push(param_token.lexeme.clone());
+                    self.cursor += 1;
+
+                    if let Some(next_token) = self.tokens.get(self.cursor) {
+                        println!("{}", next_token.lexeme.clone());
+                        match next_token.token_type {
+                            TokenType::Comma => self.cursor += 1,
+                            TokenType::RParen => {
+                                self.cursor += 1;
+                                break;
+                            }
+                            _ => unimplemented!(),
+                        }
+                    } else {
+                        std::process::exit(1)
+                    }
+                }
+                TokenType::RParen => break,
+                _ => unimplemented!(),
+            }
+
+            if self.cursor >= self.tokens.len() {
+                break;
+            }
+        }
+        println!("Made it to parsing call expr");
+        let call_expr = Expression::CallExpr { name, params };
+
+        self.tokens.drain(0..self.cursor); // so uhh... forgot to add this line...
+                                           // took 2 hours to figure out why it wasnt working
+                                           // having fun :)
+        self.nodes.push(Ast::Expression(call_expr));
     }
 
     fn parse_literal(
@@ -122,21 +171,7 @@ impl Parser {
                 Expression::StringLiteral(token.lexeme.clone()),
                 Some(Type::String),
             ),
-            TokenType::NumericLiteral => {
-                let message = format!(
-                    "{} \x1b[1mFailed to parse '{}' as a numeric literal\x1b[0m",
-                    ERROR_INDICATOR, token.lexeme,
-                );
-
-                let is_f32 = token.lexeme.contains('.');
-
-                let v = token
-                    .lexeme
-                    .parse::<f32>()
-                    .map_err(|_| self.throw_error(self.tokens[0].line_num, message))
-                    .unwrap();
-                println!("just parsed v");
-
+            TokenType::NumericLiteral | TokenType::Identifier => {
                 let mut to_eval: Vec<Token> = Vec::new();
 
                 let mut keyword_error = false;
@@ -280,5 +315,10 @@ impl Parser {
     pub fn throw_error(&mut self, line: usize, message: String) {
         self.errors
             .push(VeloError::error(line, &message, ParseError));
+    }
+
+    pub fn throw_error_ref(&mut self, _line: &usize, message: String) {
+        self.errors.push(VeloError::error(0, &message, ParseError));
+        // FIXME: In a huge war with the borrow checker rn (ima win)
     }
 }

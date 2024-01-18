@@ -56,6 +56,11 @@ pub enum Expression {
     StringLiteral(String),
     Null,
 
+    CallExpr {
+        name: String,
+        params: Vec<String>,
+    },
+
     BinaryOp {
         lhs: Box<Ast>,
         op: TokenType,
