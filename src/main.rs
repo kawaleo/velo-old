@@ -8,7 +8,6 @@ use syntax::lexer::Lexer;
 use syntax::parse::Parser;
 
 mod error;
-mod library;
 mod runtime;
 mod syntax;
 
@@ -54,10 +53,7 @@ fn repl() {
         let mut parser = Parser::new(tokens);
         let ast = parser.parse();
 
-        let env = Environment::init();
-        println!("{:#?}", env);
-
-        evaluate(parser.nodes, &mut env.clone());
+        evaluate(parser.nodes);
 
         println!("{:#?}", ast);
     }
@@ -71,5 +67,5 @@ fn parse_file(contents: String) {
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
 
-    println!("{:#?}", ast);
+    evaluate(parser.nodes);
 }

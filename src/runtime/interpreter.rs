@@ -2,7 +2,8 @@
 use super::environment::Environment;
 use crate::syntax::ast::{Ast, Expression, Statement};
 
-pub fn evaluate(nodes: Vec<Ast>, env: &mut Environment) {
+pub fn evaluate(nodes: Vec<Ast>) {
+    let mut env = Environment::init();
     for node in nodes {
         match node {
             Ast::Expression(expr) => match expr {
@@ -34,9 +35,12 @@ pub fn evaluate(nodes: Vec<Ast>, env: &mut Environment) {
                     name,
                     var_type,
                     value,
-                } => todo!(),
+                } => {
+                    env.declare_variable(name, value, constant);
+                }
                 _ => todo!(),
             },
         }
     }
+    println!("{:#?}", env)
 }

@@ -1,5 +1,2 @@
 z := 1;
-
-fun main() {
-  x := 1 + 2;
-}
+print("hello, world");

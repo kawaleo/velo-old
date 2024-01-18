@@ -21,7 +21,11 @@ pub struct LibFunction {
 
 impl Environment {
     pub fn init() -> Self {
-        let lib_functions = vec![Self::mk_lib("print", Some(1))];
+        let funcs = vec![("print", Some(1))];
+        let mut lib_functions = Vec::new();
+        for f in funcs {
+            lib_functions.push(Self::mk_lib(f.0, f.1));
+        }
 
         Environment {
             errors: Vec::new(),
@@ -40,7 +44,12 @@ impl Environment {
         }
     }
 
-    fn declare_variable(&mut self, name: String, value: Expression, constant: bool) -> Expression {
+    pub fn declare_variable(
+        &mut self,
+        name: String,
+        value: Expression,
+        constant: bool,
+    ) -> Expression {
         if constant {
             self.constants.push(value)
             // yk i would make constants a hash set
