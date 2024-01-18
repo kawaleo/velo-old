@@ -326,7 +326,7 @@ impl Parser {
                 }
                 TokenType::Identifier => {
                     let num = tokens[i].lexeme.clone();
-                    nums.push(Expression::StringLiteral(num))
+                    nums.push(Expression::Identifier(num))
                 }
                 _ => {
                     let num = tokens[i].lexeme.clone().parse::<f32>();
