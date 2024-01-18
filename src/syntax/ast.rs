@@ -58,6 +58,7 @@ pub enum Expression {
     Float(f32),
     Bool(bool),
     StringLiteral(String),
+    Identifier(String),
     Null,
 
     CallExpr {

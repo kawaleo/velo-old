@@ -140,12 +140,35 @@ impl Parser {
                         std::process::exit(1)
                     }
                 }
+                TokenType::Identifier => {
+                    let literal = self.parse_literal(
+                        param_token.clone(),
+                        &Type::Void,
+                        true,
+                        Some(self.cursor),
+                    );
+                    self.cursor += 1;
+
+                    params.push(literal.0);
+                    if let Some(after_token) = self.tokens.get(self.cursor) {
+                        println!("{}", after_token.lexeme.clone());
+                        match after_token.token_type {
+                            TokenType::Comma => self.cursor += 1,
+                            TokenType::RParen => {
+                                self.cursor += 1;
+                                break;
+                            }
+                            _ => unimplemented!(),
+                        }
+                    }
+                }
                 TokenType::RParen => break,
 
                 _ => unimplemented!(),
             }
         }
         println!("Made it to parsing call expr");
+        println!("{:#?}", params);
         let call_expr = Expression::CallExpr { name, params };
 
         self.tokens.drain(0..self.cursor); // so uhh... forgot to add this line...
