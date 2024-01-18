@@ -3,8 +3,8 @@ mod stmt;
 
 use super::ast::Expression;
 use super::ast::*;
-use super::error::{ErrorType::ParseError, VeloError, ERROR_INDICATOR};
-use super::lexer::{from_string, KeywordMap, Token, TokenType, Type, KEYWORDS};
+use super::lexer::{KeywordMap, Token, TokenType, Type, KEYWORDS};
+use crate::error::{ErrorType::ParseError, VeloError, ERROR_INDICATOR};
 
 use std::process;
 
@@ -44,8 +44,7 @@ impl Parser {
                     self.tokens.remove(0);
                 }
                 TokenType::EOF => {
-                    self.nodes
-                        .push(Ast::Expression(Expression::Literal(Literal::Null)));
+                    self.nodes.push(Ast::Expression(Expression::Null));
                     self.tokens.remove(0);
                 }
                 _ => {
@@ -101,9 +100,9 @@ impl Parser {
                         Type::to_string(&expected)
                     );
                     self.throw_error(token.line_num, message);
-                    (Expression::Literal(Literal::Bool(true)), None)
+                    (Expression::Bool(true), None)
                 } else {
-                    (Expression::Literal(Literal::Bool(true)), Some(Type::Bool))
+                    (Expression::Bool(true), Some(Type::Bool))
                 }
             }
             TokenType::False => {
@@ -114,23 +113,16 @@ impl Parser {
                         Type::to_string(&expected)
                     );
                     self.throw_error(token.line_num, message);
-                    (Expression::Literal(Literal::Bool(false)), None)
+                    (Expression::Bool(false), None)
                 } else {
-                    (Expression::Literal(Literal::Bool(false)), Some(Type::Bool))
+                    (Expression::Bool(false), Some(Type::Bool))
                 }
             }
             TokenType::String => (
-                Expression::Literal(Literal::StringLiteral(token.lexeme.clone())),
+                Expression::StringLiteral(token.lexeme.clone()),
                 Some(Type::String),
             ),
             TokenType::NumericLiteral => {
-                let has_operator = self.tokens.get(self.cursor + 1).map_or(false, |t| {
-                    matches!(
-                        t.token_type,
-                        TokenType::Add | TokenType::Sub | TokenType::Mul | TokenType::Div
-                    )
-                });
-
                 let message = format!(
                     "{} \x1b[1mFailed to parse '{}' as a numeric literal\x1b[0m",
                     ERROR_INDICATOR, token.lexeme,
@@ -145,89 +137,85 @@ impl Parser {
                     .unwrap();
                 println!("just parsed v");
 
-                if has_operator {
-                    let mut to_eval: Vec<Token> = Vec::new();
+                let mut to_eval: Vec<Token> = Vec::new();
 
-                    let mut keyword_error = false;
-                    let mut keyword_fault = TokenType::Null;
-                    let mut current_index = self.cursor + 1;
+                let mut keyword_error = false;
+                let mut keyword_fault = TokenType::Null;
+                let mut current_index = self.cursor + 1;
 
-                    to_eval.push(self.tokens[current_index - 1].clone());
+                to_eval.push(self.tokens[current_index - 1].clone());
 
-                    while let Some(next_token) = self.tokens.get(current_index) {
-                        println!("while loop iter {}", current_index);
-                        if [
-                            TokenType::NumericLiteral,
-                            TokenType::Identifier,
-                            TokenType::Add,
-                            TokenType::Sub,
-                            TokenType::Mul,
-                            TokenType::Div,
-                        ]
-                        .contains(&next_token.token_type)
-                            || KeywordMap::get(&KEYWORDS, &next_token.lexeme).is_some()
-                        {
-                            if KEYWORDS.get(&next_token.lexeme).is_some() {
-                                keyword_error = true;
-                                keyword_fault = next_token.token_type;
-                                println!("keyword: {:#?}", KEYWORDS.get(&next_token.lexeme))
-                            }
-                            if next_token.token_type == TokenType::Identifier {
-                                to_eval.push(next_token.clone());
-                                current_index += 1;
-                            } else {
-                                to_eval.push(next_token.clone());
-                                current_index += 1;
-                            }
+                while let Some(next_token) = self.tokens.get(current_index) {
+                    println!("while loop iter {}", current_index);
+                    if [
+                        TokenType::NumericLiteral,
+                        TokenType::Identifier,
+                        TokenType::Add,
+                        TokenType::Sub,
+                        TokenType::Mul,
+                        TokenType::Div,
+                    ]
+                    .contains(&next_token.token_type)
+                        || KeywordMap::get(&KEYWORDS, &next_token.lexeme).is_some()
+                    {
+                        if KEYWORDS.get(&next_token.lexeme).is_some() {
+                            keyword_error = true;
+                            keyword_fault = next_token.token_type;
+                            println!("keyword: {:#?}", KEYWORDS.get(&next_token.lexeme))
+                        }
+                        if next_token.token_type == TokenType::Identifier {
+                            to_eval.push(next_token.clone());
+                            current_index += 1;
                         } else {
-                            break;
-                        }
-                    }
-
-                    let keyword_error_msg = format!(
-                        "{} \x1b[1mExpected ';' after expression, found keyword '{}'\x1b[0m",
-                        ERROR_INDICATOR,
-                        TokenType::to_string(keyword_fault),
-                    );
-
-                    self.cursor = current_index - 1;
-
-                    match keyword_error {
-                        false => {
-                            let res = Self::parse_expression(to_eval);
-                            (res, Some(Type::Float))
-                        }
-                        _ => {
-                            self.throw_error(self.tokens[1].line_num, keyword_error_msg);
-                            return (Expression::Literal(Literal::Float(0.0)), Some(Type::Float));
-                        }
-                    }
-                } else {
-                    if !is_f32 {
-                        match v {
-                            // Check if it's a float and return Float if so
-                            val if val.is_sign_positive() && val.fract() != 0.0 => {
-                                (Expression::Literal(Literal::Float(val)), Some(Type::Float))
-                            }
-                            // Check if it's a whole number and fits into i16
-                            val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
-                                Expression::Literal(Literal::Short(val as i16)),
-                                Some(Type::Short),
-                            ),
-                            // Check if it's a whole number and fits into i32
-                            val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
-                                Expression::Literal(Literal::Int(val as i32)),
-                                Some(Type::Int),
-                            ),
-                            // For values larger than i32 or with decimal parts, use i64 (Large)
-                            val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
-                                Expression::Literal(Literal::Large(val as i64)),
-                                Some(Type::Large),
-                            ),
-                            _ => (Expression::Literal(Literal::Float(v)), Some(Type::Float)), // todo: throw error
+                            to_eval.push(next_token.clone());
+                            current_index += 1;
                         }
                     } else {
-                        (Expression::Literal(Literal::Float(v)), Some(Type::Float))
+                        break;
+                    }
+                }
+
+                /*
+                match v {
+                    // Check if it's a float and return Float if so
+                    val if val.is_sign_positive() && val.fract() != 0.0 => {
+                        (Expression::Literal(Literal::Float(val)), Some(Type::Float))
+                    }
+                    // Check if it's a whole number and fits into i16
+                    val if val.fract() == 0.0 && (val as i16 as f32 == val) => (
+                        Expression::Literal(Literal::Short(val as i16)),
+                        Some(Type::Short),
+                    ),
+                    // Check if it's a whole number and fits into i32
+                    val if val.fract() == 0.0 && (val as i32 as f32 == val) => (
+                        Expression::Literal(Literal::Int(val as i32)),
+                        Some(Type::Int),
+                    ),
+                    // For values larger than i32 or with decimal parts, use i64 (Large)
+                    val if val.fract() == 0.0 && (val as i64 as f32 == val) => (
+                        Expression::Literal(Literal::Large(val as i64)),
+                        Some(Type::Large),
+                    ),
+                    _ => (Expression::Literal(Literal::Float(v)), Some(Type::Float)), // todo: throw error
+                }
+                */
+
+                let keyword_error_msg = format!(
+                    "{} \x1b[1mExpected ';' after expression, found keyword '{}'\x1b[0m",
+                    ERROR_INDICATOR,
+                    TokenType::to_string(keyword_fault),
+                );
+
+                self.cursor = current_index - 1;
+
+                match keyword_error {
+                    false => {
+                        let res = Self::parse_expression(to_eval);
+                        (res, Some(Type::Float))
+                    }
+                    _ => {
+                        self.throw_error(self.tokens[1].line_num, keyword_error_msg);
+                        return (Expression::Float(0.0), Some(Type::Float));
                     }
                 }
             }
@@ -239,7 +227,7 @@ impl Parser {
                 self.throw_error(self.tokens[0].line_num, message);
                 self.cursor = 0;
 
-                (Expression::Literal(Literal::Null), Some(Type::Void))
+                (Expression::Null, Some(Type::Void))
             }
         }
     }
@@ -256,12 +244,12 @@ impl Parser {
                 }
                 TokenType::Identifier => {
                     let num = tokens[i].lexeme.clone();
-                    nums.push(Expression::Literal(Literal::StringLiteral(num)))
+                    nums.push(Expression::StringLiteral(num))
                 }
                 _ => {
                     let num = tokens[i].lexeme.clone().parse::<f32>();
                     if let Ok(value) = num {
-                        nums.push(Expression::Literal(Literal::Float(num.unwrap())))
+                        nums.push(Expression::Float(num.unwrap()))
                     }
                 }
             }

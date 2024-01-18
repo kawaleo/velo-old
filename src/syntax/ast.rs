@@ -48,16 +48,6 @@ impl FunctionBody {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
-    Literal(Literal),
-    BinaryOp {
-        lhs: Box<Ast>,
-        op: TokenType,
-        rhs: Box<Ast>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Literal {
     Short(i16),
     Int(i32),
     Large(i64),
@@ -65,24 +55,10 @@ pub enum Literal {
     Bool(bool),
     StringLiteral(String),
     Null,
-}
 
-impl From<Literal> for Ast {
-    fn from(literal: Literal) -> Self {
-        match literal {
-            Literal::Float(val) => Ast::Statement(Statement::VariableAssignment {
-                constant: false,
-                name: "".to_string(),
-                var_type: Type::Void,
-                value: Expression::Literal(Literal::Null),
-            }),
-            Literal::StringLiteral(val) => Ast::Statement(Statement::VariableAssignment {
-                constant: false,
-                name: "".to_string(),
-                var_type: Type::Void,
-                value: Expression::Literal(Literal::StringLiteral(val)),
-            }),
-            _ => Ast::Expression(Expression::Literal(Literal::Null)),
-        }
-    }
+    BinaryOp {
+        lhs: Box<Ast>,
+        op: TokenType,
+        rhs: Box<Ast>,
+    },
 }

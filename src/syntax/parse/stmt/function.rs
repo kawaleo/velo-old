@@ -1,6 +1,6 @@
 use super::super::Parser;
-use crate::syntax::ast::{Ast, Expression, FunctionBody, Literal, Statement};
-use crate::syntax::error::ERROR_INDICATOR;
+use crate::error::ERROR_INDICATOR;
+use crate::syntax::ast::{Ast, Expression, FunctionBody, Statement};
 use crate::syntax::lexer::{Token, TokenType, Type};
 
 impl Parser {

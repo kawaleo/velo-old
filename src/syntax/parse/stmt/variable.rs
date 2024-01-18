@@ -1,6 +1,6 @@
 use super::super::Parser;
-use crate::syntax::ast::{Ast, Expression, Literal, Statement};
-use crate::syntax::error::ERROR_INDICATOR;
+use crate::error::ERROR_INDICATOR;
+use crate::syntax::ast::{Ast, Expression, Statement};
 use crate::syntax::lexer::{Token, TokenType, Type};
 
 impl Parser {
@@ -28,7 +28,7 @@ impl Parser {
         //FIX ME: parse_literal panics when type for tuple is invalid
         //i.e: x: (this)
         //above panics ^^^
-        let mut value = (Expression::Literal(Literal::Null), None);
+        let mut value = (Expression::Null, None);
         let tok = match in_fn {
             true => self.tokens[self.cursor - 1].clone(),
             _ => self.tokens[self.cursor].clone(),

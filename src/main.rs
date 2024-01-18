@@ -5,6 +5,8 @@ use std::{env, fs};
 use syntax::lexer::Lexer;
 use syntax::parse::Parser;
 
+mod error;
+mod runtime;
 mod syntax;
 
 fn main() {
