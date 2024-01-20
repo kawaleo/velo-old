@@ -1,2 +1,2 @@
-x := "Hello";
+input(x);
 print(x);

@@ -51,7 +51,6 @@ impl Parser {
                 TokenType::Semicolon => {
                     println!("Itsa semicolon");
                     self.tokens.remove(0);
-                    continue;
                 }
                 TokenType::EOF => {
                     self.nodes.push(Ast::Expression(Expression::Null));
@@ -179,7 +178,10 @@ impl Parser {
         self.tokens.drain(0..self.cursor); // so uhh... forgot to add this line...
                                            // took 2 hours to figure out why it wasnt working
                                            // having fun :)
-        println!("the first token is == {:#?}", self.tokens[0].lexeme.clone());
+
+        self.cursor = 0; // once again, forgot to add this line
+                         // took me around 30 minutes before i walked away
+                         // literally figured out the error while rock climbing... lol
         self.nodes.push(Ast::Expression(call_expr));
     }
 

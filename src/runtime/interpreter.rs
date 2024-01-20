@@ -9,8 +9,6 @@ pub fn evaluate(nodes: Vec<Ast>) {
         match node {
             Ast::Expression(expr) => match expr {
                 Expression::CallExpr { name, params } => {
-                    println!("starting call expr eval");
-                    println!("{:#?}", name);
                     let mut is_lib = false;
 
                     for lib in env.lib_functions.iter() {
@@ -26,7 +24,6 @@ pub fn evaluate(nodes: Vec<Ast>) {
                             "print" => match &params[0] {
                                 Expression::Identifier(ident) => {
                                     if let Some(expr) = env.variables.get(ident) {
-                                        println!("The Identifier is `{}`", &ident);
                                         match expr {
                                             Expression::StringLiteral(str) => {
                                                 println!("{}", str)
@@ -57,7 +54,6 @@ pub fn evaluate(nodes: Vec<Ast>) {
                                     ),
                                     _ => unimplemented!(),
                                 };
-                                println!("{:#?}", env);
                                 continue;
                             }
                             _ => unimplemented!(),
@@ -80,5 +76,4 @@ pub fn evaluate(nodes: Vec<Ast>) {
             },
         }
     }
-    println!("{:#?}", env)
 }
