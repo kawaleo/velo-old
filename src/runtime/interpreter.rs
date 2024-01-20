@@ -1,4 +1,5 @@
-// todo??
+use std::io;
+
 use super::environment::Environment;
 use crate::syntax::ast::{Ast, Expression, Statement};
 
@@ -8,7 +9,8 @@ pub fn evaluate(nodes: Vec<Ast>) {
         match node {
             Ast::Expression(expr) => match expr {
                 Expression::CallExpr { name, params } => {
-                    println!("evaluating call expr");
+                    println!("starting call expr eval");
+                    println!("{:#?}", name);
                     let mut is_lib = false;
 
                     for lib in env.lib_functions.iter() {
@@ -21,7 +23,43 @@ pub fn evaluate(nodes: Vec<Ast>) {
 
                     if is_lib {
                         match name.as_str() {
-                            "print" => println!("{:#?}", params[0]),
+                            "print" => match &params[0] {
+                                Expression::Identifier(ident) => {
+                                    if let Some(expr) = env.variables.get(ident) {
+                                        println!("The Identifier is `{}`", &ident);
+                                        match expr {
+                                            Expression::StringLiteral(str) => {
+                                                println!("{}", str)
+                                            }
+                                            _ => todo!(),
+                                        }
+                                    } else {
+                                        println!("{:#?}", &params[0])
+                                    }
+                                }
+                                Expression::StringLiteral(ident) => {
+                                    println!("{}", ident)
+                                }
+                                _ => todo!(),
+                            },
+                            "input" => {
+                                let mut buffer = String::new();
+                                io::stdin()
+                                    .read_line(&mut buffer)
+                                    .expect("Failed to read line");
+                                let buffer = buffer.trim().to_string();
+
+                                match &params[0] {
+                                    Expression::Identifier(ident) => env.declare_variable(
+                                        ident.to_string(),
+                                        Expression::StringLiteral(buffer),
+                                        false,
+                                    ),
+                                    _ => unimplemented!(),
+                                };
+                                println!("{:#?}", env);
+                                continue;
+                            }
                             _ => unimplemented!(),
                         }
                     }
@@ -33,7 +71,7 @@ pub fn evaluate(nodes: Vec<Ast>) {
                 Statement::VariableAssignment {
                     constant,
                     name,
-                    var_type,
+                    var_type: _, // gonna remove this eventually
                     value,
                 } => {
                     env.declare_variable(name, value, constant);

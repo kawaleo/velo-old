@@ -36,18 +36,22 @@ impl Parser {
                     self.variable_assignment(false, None, true, false);
                 }
                 TokenType::Function => self.function_declaration(),
-                TokenType::Identifier => match self.tokens[1].token_type {
-                    TokenType::ColonEq => {
-                        self.variable_assignment(false, None, false, false);
+                TokenType::Identifier => {
+                    match self.tokens[1].token_type {
+                        TokenType::ColonEq => {
+                            self.variable_assignment(false, None, false, false);
+                        }
+                        TokenType::LParen => {
+                            self.call_expr();
+                        }
+                        TokenType::Eq => unimplemented!(), // for not reassignment
+                        _ => unimplemented!(),
                     }
-                    TokenType::LParen => {
-                        self.call_expr();
-                    }
-                    TokenType::Eq => unimplemented!(), // for not reassignment
-                    _ => unimplemented!(),
-                },
+                }
                 TokenType::Semicolon => {
+                    println!("Itsa semicolon");
                     self.tokens.remove(0);
+                    continue;
                 }
                 TokenType::EOF => {
                     self.nodes.push(Ast::Expression(Expression::Null));
@@ -164,16 +168,18 @@ impl Parser {
                 }
                 TokenType::RParen => break,
 
-                _ => unimplemented!(),
+                _ => {
+                    println!("`{}` is unimplemented!", param_token.lexeme.clone());
+                    unimplemented!()
+                }
             }
         }
-        println!("Made it to parsing call expr");
-        println!("{:#?}", params);
         let call_expr = Expression::CallExpr { name, params };
 
         self.tokens.drain(0..self.cursor); // so uhh... forgot to add this line...
                                            // took 2 hours to figure out why it wasnt working
                                            // having fun :)
+        println!("the first token is == {:#?}", self.tokens[0].lexeme.clone());
         self.nodes.push(Ast::Expression(call_expr));
     }
 

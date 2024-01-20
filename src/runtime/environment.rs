@@ -21,7 +21,7 @@ pub struct LibFunction {
 
 impl Environment {
     pub fn init() -> Self {
-        let funcs = vec![("print", Some(1))];
+        let funcs = vec![("print", Some(1)), ("input", Some(2))];
         let mut lib_functions = Vec::new();
         for f in funcs {
             lib_functions.push(Self::mk_lib(f.0, f.1));

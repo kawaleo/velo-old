@@ -1,5 +1,4 @@
 use crate::error::ERROR_INDICATOR;
-use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenType {
