@@ -13,7 +13,6 @@ pub enum Statement {
     VariableAssignment {
         constant: bool,
         name: String,
-        var_type: Type,
         value: Expression,
     },
     Function {

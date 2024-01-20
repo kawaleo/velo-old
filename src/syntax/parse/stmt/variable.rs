@@ -28,7 +28,7 @@ impl Parser {
         //FIX ME: parse_literal panics when type for tuple is invalid
         //i.e: x: (this)
         //above panics ^^^
-        let mut value = (Expression::Null, None);
+        let mut value = Expression::Null;
         let tok = match in_fn {
             true => self.tokens[self.cursor - 1].clone(),
             _ => self.tokens[self.cursor].clone(),
@@ -38,11 +38,19 @@ impl Parser {
             self.cursor -= 1
         }
 
-        value = self.parse_literal(tok, &Type::Void, infer_type, Some(self.cursor));
-
-        match value.1.is_some() {
-            true => final_type = value.1.unwrap(),
-            _ => {}
+        if let Some(next_token) = self.tokens.get(self.cursor) {
+            println!("{}", next_token.lexeme.clone());
+            match next_token.token_type {
+                TokenType::Identifier => {
+                    if let Some(next_next_token) = self.tokens.get(self.cursor + 1) {
+                        match next_next_token.token_type {
+                            TokenType::LParen => value = self.call_expr_as_var(),
+                            _ => value = self.parse_literal(tok, Some(self.cursor), false),
+                        }
+                    }
+                }
+                _ => value = self.parse_literal(tok, Some(self.cursor), false),
+            }
         }
         let message = format!(
             "{} \x1b[1mExpected semicolon following variable '{}', found {}\x1b[0m",
@@ -54,8 +62,7 @@ impl Parser {
         let variable = Statement::VariableAssignment {
             constant: mk_const,
             name,
-            var_type: final_type,
-            value: value.0,
+            value,
         };
 
         let mut res = None;

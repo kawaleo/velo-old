@@ -67,7 +67,6 @@ pub fn evaluate(nodes: Vec<Ast>) {
                 Statement::VariableAssignment {
                     constant,
                     name,
-                    var_type: _, // gonna remove this eventually
                     value,
                 } => {
                     env.declare_variable(name, value, constant);
