@@ -45,11 +45,11 @@ impl Parser {
                     if let Some(next_next_token) = self.tokens.get(self.cursor + 1) {
                         match next_next_token.token_type {
                             TokenType::LParen => value = self.call_expr_as_var(),
-                            _ => value = self.parse_literal(tok, Some(self.cursor), false),
+                            _ => value = self.parse_literal(tok, Some(self.cursor)),
                         }
                     }
                 }
-                _ => value = self.parse_literal(tok, Some(self.cursor), false),
+                _ => value = self.parse_literal(tok, Some(self.cursor)),
             }
         }
         let message = format!(

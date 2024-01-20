@@ -83,16 +83,6 @@ impl TokenType {
     }
 }
 
-pub fn from_string(s: &str) -> TokenType {
-    match s {
-        "+" => TokenType::Add,
-        "-" => TokenType::Sub,
-        "*" => TokenType::Mul,
-        "/" => TokenType::Div,
-        _ => todo!(),
-    }
-}
-
 pub struct KeywordMap {
     data: [(&'static str, TokenType); 18],
 }
@@ -178,9 +168,6 @@ impl Type {
         }
 
         type_result.unwrap()
-    }
-    pub fn to_string(ty: &Type) -> String {
-        format!("{:#?}", ty).to_lowercase()
     }
 }
 
