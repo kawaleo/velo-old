@@ -1,78 +1,39 @@
-use std::io;
-
 use super::environment::Environment;
+use super::eval::expr::*;
 use crate::syntax::ast::{Ast, Expression, Statement};
 
+use std::io;
+
+// TODO: Create a separate call expr function that just returns an expression
+// I'll use it when parsing variables probably
 pub fn evaluate(nodes: Vec<Ast>) {
     let mut env = Environment::init();
     for node in nodes {
         match node {
             Ast::Expression(expr) => match expr {
-                Expression::CallExpr { name, params } => {
-                    let mut is_lib = false;
-
-                    for lib in env.lib_functions.iter() {
-                        if name == lib.name {
-                            is_lib = true
-                        } else {
-                            continue;
-                        }
-                    }
-
-                    if is_lib {
-                        match name.as_str() {
-                            "print" => match &params[0] {
-                                Expression::Identifier(ident) => {
-                                    if let Some(expr) = env.variables.get(ident) {
-                                        match expr {
-                                            Expression::StringLiteral(str) => {
-                                                println!("{}", str)
-                                            }
-                                            _ => todo!(),
-                                        }
-                                    } else {
-                                        std::process::exit(1)
-                                    }
-                                }
-                                Expression::StringLiteral(ident) => {
-                                    println!("{}", ident)
-                                }
-                                _ => todo!(),
-                            },
-                            "input" => {
-                                let mut buffer = String::new();
-                                io::stdin()
-                                    .read_line(&mut buffer)
-                                    .expect("Failed to read line");
-                                let buffer = buffer.trim().to_string();
-
-                                match &params[0] {
-                                    Expression::Identifier(ident) => env.declare_variable(
-                                        ident.to_string(),
-                                        Expression::StringLiteral(buffer),
-                                        false,
-                                    ),
-                                    _ => unimplemented!(),
-                                };
-                                continue;
-                            }
-                            _ => unimplemented!(),
-                        }
-                    }
-                }
+                Expression::CallExpr {
+                    ref name,
+                    ref params,
+                } => eval_call_expr(&expr, &mut env, None),
                 Expression::Null => {}
                 _ => unimplemented!(), // sticking out your gyat
             },
             Ast::Statement(stmt) => match stmt {
                 Statement::VariableAssignment {
                     constant,
-                    name,
-                    value,
-                } => {
-                    env.declare_variable(name, value, constant);
-                }
+                    ref name,
+                    ref value,
+                } => match value {
+                    Expression::CallExpr { name, params } => {
+                        eval_call_expr(&value, &mut env, Some(&stmt))
+                    }
+                    _ => {
+                        env.declare_variable(name.to_string(), value.clone(), constant);
+                    }
+                },
                 _ => todo!(),
             },
         }
     }
+    println!("{:#?}", env)
 }
