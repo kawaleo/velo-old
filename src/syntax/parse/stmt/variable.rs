@@ -39,7 +39,6 @@ impl Parser {
         }
 
         if let Some(next_token) = self.tokens.get(self.cursor) {
-            println!("{}", next_token.lexeme.clone());
             match next_token.token_type {
                 TokenType::Identifier => {
                     if let Some(next_next_token) = self.tokens.get(self.cursor + 1) {

@@ -4,7 +4,6 @@ use crate::syntax::lexer::TokenType;
 
 impl Parser {
     pub fn call_expr(&mut self) -> Expression {
-        println!("Parsing a standard call expression");
         let name = self.tokens[self.cursor].lexeme.clone();
         self.cursor += 2;
 
@@ -17,7 +16,6 @@ impl Parser {
                     self.cursor += 1;
 
                     if let Some(next_token) = self.tokens.get(self.cursor) {
-                        println!("{}", next_token.lexeme.clone());
                         match next_token.token_type {
                             TokenType::Comma => self.cursor += 1,
                             TokenType::RParen => {
@@ -36,7 +34,6 @@ impl Parser {
 
                     params.push(literal);
                     if let Some(after_token) = self.tokens.get(self.cursor) {
-                        println!("{}", after_token.lexeme.clone());
                         match after_token.token_type {
                             TokenType::Comma => self.cursor += 1,
                             TokenType::RParen => {
@@ -75,8 +72,7 @@ impl Parser {
 
     pub fn call_expr_as_var(&mut self) -> Expression {
         let name = self.tokens[self.cursor].lexeme.clone();
-        self.cursor += 3;
-        println!("{:#?}", self.tokens[self.cursor].lexeme.clone());
+        self.cursor += 2;
         let mut params = Vec::new();
 
         while let Some(param_token) = self.tokens.get(self.cursor) {
@@ -86,7 +82,6 @@ impl Parser {
                     self.cursor += 1;
 
                     if let Some(next_token) = self.tokens.get(self.cursor) {
-                        println!("{}", next_token.lexeme.clone());
                         match next_token.token_type {
                             TokenType::Comma => self.cursor += 1,
                             TokenType::RParen => {
@@ -105,7 +100,6 @@ impl Parser {
 
                     params.push(literal);
                     if let Some(after_token) = self.tokens.get(self.cursor) {
-                        println!("{}", after_token.lexeme.clone());
                         match after_token.token_type {
                             TokenType::Comma => self.cursor += 1,
                             TokenType::RParen => {
@@ -125,9 +119,9 @@ impl Parser {
         }
         let call_expr = Expression::CallExpr { name, params };
 
-        self.tokens.drain(0..=self.cursor); // so uhh... forgot to add this line...
-                                            // took 2 hours to figure out why it wasnt working
-                                            // having fun :)
+        self.tokens.drain(0..self.cursor); // so uhh... forgot to add this line...
+                                           // took 2 hours to figure out why it wasnt working
+                                           // having fun :)
 
         self.cursor = 0;
 

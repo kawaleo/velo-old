@@ -54,8 +54,6 @@ fn repl() {
         let ast = parser.parse();
 
         evaluate(parser.nodes);
-
-        println!("{:#?}", ast);
     }
 }
 
@@ -66,7 +64,6 @@ fn parse_file(contents: String) {
 
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    println!("{:#?}", ast);
 
     evaluate(parser.nodes);
 }

@@ -1,6 +1,6 @@
+mod expr;
 #[allow(unused)]
 mod stmt;
-mod expr;
 
 use super::ast::Expression;
 use super::ast::*;
@@ -47,7 +47,6 @@ impl Parser {
                     }
                 }
                 TokenType::Semicolon => {
-                    println!("Itsa semicolon");
                     self.tokens.remove(0);
                 }
                 TokenType::EOF => {
@@ -86,8 +85,6 @@ impl Parser {
 
         Ok(ast_nodes)
     }
-
-    
 
     fn parse_literal(&mut self, token: Token, cursor: Option<usize>) -> Expression {
         match cursor.is_some() {
@@ -223,7 +220,7 @@ impl Parser {
                 }
                 _ => {
                     let num = tokens[i].lexeme.clone().parse::<f32>();
-                    if let Ok(value) = num {
+                    if num.is_ok() {
                         nums.push(Expression::Float(num.unwrap()))
                     }
                 }

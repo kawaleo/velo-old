@@ -31,7 +31,7 @@ pub fn evaluate(nodes: Vec<Ast>) {
                                             _ => todo!(),
                                         }
                                     } else {
-                                        println!("{:#?}", &params[0])
+                                        std::process::exit(1)
                                     }
                                 }
                                 Expression::StringLiteral(ident) => {
