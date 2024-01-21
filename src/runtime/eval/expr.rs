@@ -28,27 +28,41 @@ pub fn eval_call_expr(call_expr: &Expression, env: &mut Environment, var: Option
 
     if is_lib {
         match name.as_str() {
-            "print" => match &params[0] {
-                Expression::Identifier(ident) => {
-                    if let Some(expr) = env.variables.get(ident) {
-                        match expr {
-                            Expression::StringLiteral(str) => {
-                                println!("{}", str)
+            "print" | "println" => {
+                let mut line = false;
+                if name.as_str() == "println" {
+                    line = true
+                }
+                match &params[0] {
+                    Expression::Identifier(ident) => {
+                        if let Some(expr) = env.variables.get(ident) {
+                            match expr {
+                                Expression::StringLiteral(str) => {
+                                    if line {
+                                        println!("{}", str)
+                                    } else {
+                                        print!("{}", str)
+                                    }
+                                }
+                                _ => {
+                                    println!("{:#?}", expr);
+                                    todo!()
+                                }
                             }
-                            _ => {
-                                println!("{:#?}", expr);
-                                todo!()
-                            }
+                        } else {
+                            std::process::exit(1)
                         }
-                    } else {
-                        std::process::exit(1)
                     }
+                    Expression::StringLiteral(ident) => {
+                        if line {
+                            println!("{}", ident)
+                        } else {
+                            print!("{}", ident)
+                        }
+                    }
+                    _ => todo!(),
                 }
-                Expression::StringLiteral(ident) => {
-                    println!("{}", ident)
-                }
-                _ => todo!(),
-            },
+            }
             "input" => {
                 if var.is_none() {
                     println!("`input` requires a variable to store to");

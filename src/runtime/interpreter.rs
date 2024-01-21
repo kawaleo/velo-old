@@ -35,5 +35,5 @@ pub fn evaluate(nodes: Vec<Ast>) {
             },
         }
     }
-    println!("{:#?}", env)
+    println!("\n{:#?}", env)
 }
